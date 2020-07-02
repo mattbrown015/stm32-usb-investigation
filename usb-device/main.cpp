@@ -39,7 +39,7 @@ void MyUSBDevice::callback_state_change(DeviceState new_state) {
 }
 
 void MyUSBDevice::callback_request(const setup_packet_t *setup) {
-
+    complete_request(PassThrough, NULL, 0);
 }
 
 void MyUSBDevice::callback_request_xfer_done(const setup_packet_t *setup, bool aborted) {
