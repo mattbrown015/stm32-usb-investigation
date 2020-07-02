@@ -1,3 +1,2 @@
 usb-host.exe: main.cpp
-	g++ $< -Wall -Wextra -o $@
-
+	g++ $< -Wall -Wextra -lusb-1.0 -o $@
