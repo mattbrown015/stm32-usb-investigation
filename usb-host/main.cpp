@@ -46,16 +46,16 @@ int main() {
         printf("libusb_init success\n");
     }
 
-    libusb_device **devs;
-    const auto cnt = libusb_get_device_list(NULL, &devs);
-    printf("cnt %lld\n", cnt);
-    if (cnt < 0) {
+    libusb_device **device_list;
+    const auto number_of_devices = libusb_get_device_list(NULL, &device_list);
+    printf("number of devices %lld\n", number_of_devices);
+    if (number_of_devices < 0) {
         libusb_exit(NULL);
         return 1;
     }
 
-    print_devs(devs);
-    libusb_free_device_list(devs, 1);
+    print_devs(device_list);
+    libusb_free_device_list(device_list, 1);
 
     libusb_exit(NULL);
 
