@@ -5,25 +5,25 @@
 namespace
 {
 
-void print_devs(libusb_device **devs)
+void print_devs(libusb_device **device_list)
 {
-    libusb_device *dev;
+    libusb_device *device;
     int i = 0, j = 0;
     uint8_t path[8];
 
-    while ((dev = devs[i++]) != NULL) {
-        struct libusb_device_descriptor desc;
-        int r = libusb_get_device_descriptor(dev, &desc);
+    while ((device = device_list[i++]) != NULL) {
+        struct libusb_device_descriptor device_descriptor;
+        int r = libusb_get_device_descriptor(device, &device_descriptor);
         if (r < 0) {
             printf("failed to get device descriptor\n");
             return;
         }
 
         printf("%04x:%04x (bus %d, device %d)",
-            desc.idVendor, desc.idProduct,
-            libusb_get_bus_number(dev), libusb_get_device_address(dev));
+            device_descriptor.idVendor, device_descriptor.idProduct,
+            libusb_get_bus_number(device), libusb_get_device_address(device));
 
-        r = libusb_get_port_numbers(dev, path, sizeof(path));
+        r = libusb_get_port_numbers(device, path, sizeof(path));
         if (r > 0) {
             printf(" path: %d", path[0]);
             for (j = 1; j < r; j++)
