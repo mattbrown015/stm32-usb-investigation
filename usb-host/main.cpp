@@ -14,7 +14,7 @@ void print_devs(libusb_device **device_list)
         struct libusb_device_descriptor device_descriptor;
         const auto error = libusb_get_device_descriptor(device, &device_descriptor);
         if (error < 0) {
-            printf("failed to get device descriptor\n");
+            printf("failed to get device descriptor %s\n", libusb_strerror(static_cast<libusb_error>(error)));
             return;
         }
 
@@ -40,7 +40,7 @@ int main() {
 
     const auto error = libusb_init(NULL);
     if (error < 0) {
-        printf("libusb_init failed %d\n", error);
+        printf("libusb_init failed %d %s\n", error, libusb_strerror(static_cast<libusb_error>(error)));
         return 1;
     } else {
         printf("libusb_init success\n");
