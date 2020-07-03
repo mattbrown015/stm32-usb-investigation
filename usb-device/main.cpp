@@ -33,18 +33,29 @@ MyUSBDevice::~MyUSBDevice() {
 
 const uint8_t *MyUSBDevice::configuration_desc(uint8_t index) {
     const uint8_t default_configuration = 1;
-    const size_t configuration_descriptor_length = 9;
+    const size_t configuration_descriptor_length = 18;
     static const uint8_t configuration_descriptor[configuration_descriptor_length] = {
         // configuration descriptor, USB spec 9.6.3
         CONFIGURATION_DESCRIPTOR_LENGTH, // bLength
         CONFIGURATION_DESCRIPTOR, // bDescriptorType
         LSB(configuration_descriptor_length), // wTotalLength
         MSB(configuration_descriptor_length),
-        0,                      // bNumInterfaces
+        1,                      // bNumInterfaces
         default_configuration,  // bConfigurationValue
         0,                      // iConfiguration
         C_RESERVED,             // bmAttributes
         C_POWER(100),           // bMaxPower
+
+        // interface descriptor, USB spec 9.6.5
+        INTERFACE_DESCRIPTOR_LENGTH, // bLength
+        INTERFACE_DESCRIPTOR,   // bDescriptorType
+        0,                      // bInterfaceNumber
+        0,                      // bAlternateSetting
+        0,                      // bNumEndpoints
+        0xff,                   // bInterfaceClass
+        0x00,                   // bInterfaceSubClass
+        0xff,                   // bInterfaceProtocol
+        0,                      // iInterface
     };
 
     return &configuration_descriptor[0];
