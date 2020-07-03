@@ -8,8 +8,7 @@ namespace
 void print_devs(libusb_device **device_list)
 {
     libusb_device *device;
-    int i = 0, j = 0;
-    uint8_t path[8];
+    int i = 0;
 
     while ((device = device_list[i++]) != NULL) {
         struct libusb_device_descriptor device_descriptor;
@@ -23,10 +22,11 @@ void print_devs(libusb_device **device_list)
             device_descriptor.idVendor, device_descriptor.idProduct,
             libusb_get_bus_number(device), libusb_get_device_address(device));
 
+        uint8_t path[8];
         r = libusb_get_port_numbers(device, path, sizeof(path));
         if (r > 0) {
             printf(" path: %d", path[0]);
-            for (j = 1; j < r; j++)
+            for (int j = 1; j < r; j++)
                 printf(".%d", path[j]);
         }
         printf("\n");
