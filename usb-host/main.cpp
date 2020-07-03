@@ -38,9 +38,9 @@ void print_devs(libusb_device **device_list)
 int main() {
     printf("usb-host\n");
 
-    const auto r = libusb_init(NULL);
-    if (r < 0) {
-        printf("libusb_init failed %d\n", r);
+    const auto error = libusb_init(NULL);
+    if (error < 0) {
+        printf("libusb_init failed %d\n", error);
         return 1;
     } else {
         printf("libusb_init success\n");
