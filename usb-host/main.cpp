@@ -1,6 +1,7 @@
 #include <libusb-1.0/libusb.h>
 
 #include <cstdio>
+#include <cinttypes>
 
 namespace
 {
@@ -32,6 +33,37 @@ void print_device_list(libusb_device **device_list) {
     }
 }
 
+void open_device(libusb_device **device_list, const uint16_t idVendor, const uint16_t idProduct) {
+    libusb_device *device_found = NULL;
+    for (auto i = 0; device_list[i]; i++) {
+        libusb_device *device = device_list[i];
+        libusb_device_descriptor device_descriptor;
+        auto error = libusb_get_device_descriptor(device, &device_descriptor);
+        if (error < 0) {
+            printf("failed to get desc %d %s\n", error, libusb_strerror(static_cast<libusb_error>(error)));
+        }
+        if (device_descriptor.idVendor == idVendor && device_descriptor.idProduct == idProduct) {
+            device_found = device;
+            break;
+        }
+    }
+
+    if (device_found) {
+        printf("found device with idVendor 0x%" PRIx16 " idProduct 0x%" PRIx16 "\n", idVendor, idProduct);
+        libusb_device_handle *device_handle;
+
+        const auto error = libusb_open(device_found, &device_handle);
+        if (error) {
+            printf("failed to open %d %s\n", error, libusb_strerror(static_cast<libusb_error>(error)));
+            return;
+        }
+
+        libusb_close(device_handle);
+    } else {
+        printf("failed to find device with idVendor 0x%" PRIx16 " idProduct 0x%" PRIx16 "\n", idVendor, idProduct);
+    }
+}
+
 }
 
 int main() {
@@ -54,6 +86,8 @@ int main() {
     }
 
     print_device_list(device_list);
+
+    open_device(device_list, 0x1f00, 0x2012);
 
     libusb_free_device_list(device_list, 1);
 
