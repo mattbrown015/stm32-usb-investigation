@@ -54,7 +54,11 @@ void open_device(libusb_device **device_list, const uint16_t idVendor, const uin
 
         const auto error = libusb_open(device_found, &device_handle);
         if (error) {
-            printf("failed to open %d %s\n", error, libusb_strerror(static_cast<libusb_error>(error)));
+            printf("'libusb_open' failed, error value %d, error name '%s', error description '%s'\n", error, libusb_error_name(static_cast<libusb_error>(error)), libusb_strerror(static_cast<libusb_error>(error)));
+            if (error == LIBUSB_ERROR_NOT_SUPPORTED) {
+                puts("'Operation not supported' error probably means Windows hasn't found a compatible driver for this device.");
+                puts("Use Zadig, https://zadig.akeo.ie/, to install the WinUSB driver for this device.");
+            }
             return;
         }
 
