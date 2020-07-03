@@ -5,7 +5,7 @@
 namespace
 {
 
-void print_devs(libusb_device **device_list)
+void print_device_list(libusb_device **device_list)
 {
     libusb_device *device;
     int i = 0;
@@ -54,7 +54,8 @@ int main() {
         return 1;
     }
 
-    print_devs(device_list);
+    print_device_list(device_list);
+
     libusb_free_device_list(device_list, 1);
 
     libusb_exit(NULL);
