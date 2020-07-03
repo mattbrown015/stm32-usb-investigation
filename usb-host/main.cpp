@@ -50,7 +50,7 @@ void open_device(libusb_device **device_list, const uint16_t idVendor, const uin
 
     if (device_found) {
         printf("found device with idVendor 0x%" PRIx16 " idProduct 0x%" PRIx16 "\n", idVendor, idProduct);
-        libusb_device_handle *device_handle;
+        libusb_device_handle *device_handle = NULL;
 
         const auto error = libusb_open(device_found, &device_handle);
         if (error) {
