@@ -70,15 +70,15 @@ void MyUSBDevice::callback_request(const setup_packet_t *setup) {
 }
 
 void MyUSBDevice::callback_request_xfer_done(const setup_packet_t *setup, bool aborted) {
-
+    complete_request_xfer_done(!aborted);
 }
 
 void MyUSBDevice::callback_set_configuration(uint8_t configuration) {
-
+    complete_set_configuration(true);
 }
 
 void MyUSBDevice::callback_set_interface(uint16_t interface, uint8_t alternate) {
-
+    complete_set_interface(true);
 }
 
 }
