@@ -12,8 +12,8 @@ void print_devs(libusb_device **device_list)
 
     while ((device = device_list[i++]) != NULL) {
         struct libusb_device_descriptor device_descriptor;
-        int r = libusb_get_device_descriptor(device, &device_descriptor);
-        if (r < 0) {
+        const auto error = libusb_get_device_descriptor(device, &device_descriptor);
+        if (error < 0) {
             printf("failed to get device descriptor\n");
             return;
         }
@@ -23,10 +23,10 @@ void print_devs(libusb_device **device_list)
             libusb_get_bus_number(device), libusb_get_device_address(device));
 
         uint8_t path[8];
-        r = libusb_get_port_numbers(device, path, sizeof(path));
-        if (r > 0) {
+        const auto port_number = libusb_get_port_numbers(device, path, sizeof(path));
+        if (port_number > 0) {
             printf(" path: %d", path[0]);
-            for (int j = 1; j < r; j++)
+            for (int j = 1; j < port_number; j++)
                 printf(".%d", path[j]);
         }
         printf("\n");
