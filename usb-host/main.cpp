@@ -29,7 +29,7 @@ void print_device_list(libusb_device **device_list) {
             for (int j = 1; j < port_number; j++)
                 printf(".%d", path[j]);
         }
-        printf("\n");
+        putchar('\n');
     }
 }
 
@@ -71,14 +71,14 @@ void open_device(libusb_device **device_list, const uint16_t idVendor, const uin
 }
 
 int main() {
-    printf("usb-host\n");
+    puts("usb-host");
 
     const auto error = libusb_init(NULL);
     if (error < 0) {
         printf("libusb_init failed %d %s\n", error, libusb_strerror(static_cast<libusb_error>(error)));
         return 1;
     } else {
-        printf("libusb_init success\n");
+        puts("libusb_init success");
     }
 
     libusb_device **device_list;
