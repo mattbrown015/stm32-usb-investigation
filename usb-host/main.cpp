@@ -5,8 +5,7 @@
 namespace
 {
 
-void print_device_list(libusb_device **device_list)
-{
+void print_device_list(libusb_device **device_list) {
     libusb_device *device;
     int i = 0;
 
