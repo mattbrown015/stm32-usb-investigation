@@ -98,8 +98,6 @@ int main() {
     if (error < 0) {
         print_libusb_error(static_cast<libusb_error>(error), "libusb_init");
         return 1;
-    } else {
-        puts("libusb_init success");
     }
 
     libusb_device **device_list;
