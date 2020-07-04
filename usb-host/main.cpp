@@ -7,6 +7,10 @@
 namespace
 {
 
+void print_libusb_error(const libusb_error error, const char *const libusb_api_function)  {
+    printf("'%s' failed, error value %d, error name '%s', error description '%s'\n", libusb_api_function, error, libusb_error_name(error), libusb_strerror(error));
+}
+
 void print_device_list(libusb_device **device_list) {
     libusb_device *device;
     int i = 0;
@@ -15,7 +19,7 @@ void print_device_list(libusb_device **device_list) {
         struct libusb_device_descriptor device_descriptor;
         const auto error = libusb_get_device_descriptor(device, &device_descriptor);
         if (error < 0) {
-            printf("failed to get device descriptor %s\n", libusb_strerror(static_cast<libusb_error>(error)));
+            print_libusb_error(static_cast<libusb_error>(error), "libusb_get_device_descriptor");
             return;
         }
 
@@ -43,7 +47,7 @@ libusb_device_handle* open_device(libusb_device **device_list, const uint16_t id
         libusb_device_descriptor device_descriptor;
         auto error = libusb_get_device_descriptor(device, &device_descriptor);
         if (error < 0) {
-            printf("failed to get desc %d %s\n", error, libusb_strerror(static_cast<libusb_error>(error)));
+            print_libusb_error(static_cast<libusb_error>(error), "libusb_get_device_descriptor");
         }
         if (device_descriptor.idVendor == idVendor && device_descriptor.idProduct == idProduct) {
             if (device_found == NULL) {
@@ -59,7 +63,7 @@ libusb_device_handle* open_device(libusb_device **device_list, const uint16_t id
 
         const auto error = libusb_open(device_found, &device_handle);
         if (error) {
-            printf("'libusb_open' failed, error value %d, error name '%s', error description '%s'\n", error, libusb_error_name(static_cast<libusb_error>(error)), libusb_strerror(static_cast<libusb_error>(error)));
+            print_libusb_error(static_cast<libusb_error>(error), "libusb_open");
             if (error == LIBUSB_ERROR_NOT_SUPPORTED) {
                 puts("'Operation not supported' error probably means Windows hasn't found a compatible driver for this device.");
                 puts("Use Zadig, https://zadig.akeo.ie/, to install the WinUSB driver for this device.");
@@ -79,7 +83,7 @@ void do_somthing_with_device(libusb_device_handle *device_handle) {
     int configuration_value = 0;
     const auto error = libusb_get_configuration(device_handle, &configuration_value);
     if (error) {
-        printf("'libusb_get_configuration' failed, error value %d, error name '%s', error description '%s'\n", error, libusb_error_name(static_cast<libusb_error>(error)), libusb_strerror(static_cast<libusb_error>(error)));
+        print_libusb_error(static_cast<libusb_error>(error), "libusb_get_configuration");
     } else {
         printf("'libusb_get_configuration' succeeded, configuration value is %d", configuration_value);
     }
@@ -92,7 +96,7 @@ int main() {
 
     const auto error = libusb_init(NULL);
     if (error < 0) {
-        printf("libusb_init failed %d %s\n", error, libusb_strerror(static_cast<libusb_error>(error)));
+        print_libusb_error(static_cast<libusb_error>(error), "libusb_init");
         return 1;
     } else {
         puts("libusb_init success");
