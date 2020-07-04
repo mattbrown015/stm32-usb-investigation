@@ -12,6 +12,8 @@ void print_libusb_error(const libusb_error error, const char *const libusb_api_f
 }
 
 void print_device_list(libusb_device **device_list) {
+    puts("Print USB device list");
+
     libusb_device *device;
     int i = 0;
 
@@ -23,7 +25,7 @@ void print_device_list(libusb_device **device_list) {
             return;
         }
 
-        printf("%04x:%04x (bus %d, device %d)",
+        printf("\t%04x:%04x (bus %d, device %d)",
             device_descriptor.idVendor, device_descriptor.idProduct,
             libusb_get_bus_number(device), libusb_get_device_address(device));
 
