@@ -1,4 +1,5 @@
 *.pyc
+*.swp
 usb-device/BUILD/
 usb-device/mbed-os/
 usb-host/usb-host.exe
