@@ -79,16 +79,28 @@ libusb_device_handle* open_device(libusb_device **device_list, const uint16_t id
     return device_handle;
 }
 
-void do_somthing_with_device(libusb_device_handle *device_handle) {
-    assert(device_handle);
+bool check_configuration_value(libusb_device_handle *const device_handle) {
+    bool success = false;
 
     int configuration_value = 0;
     const auto error = libusb_get_configuration(device_handle, &configuration_value);
     if (error) {
         print_libusb_error(static_cast<libusb_error>(error), "libusb_get_configuration");
     } else {
-        printf("'libusb_get_configuration' succeeded, configuration value is %d", configuration_value);
+        if (configuration_value == 1) {
+            success = true;
+        } else {
+            printf("'libusb_get_configuration' succeeded, configuration value is %d", configuration_value);
+        }
     }
+
+    return success;
+}
+
+void do_somthing_with_device(libusb_device_handle *const device_handle) {
+    assert(device_handle);
+
+    if (!check_configuration_value(device_handle)) return;
 }
 
 }
