@@ -97,10 +97,33 @@ bool check_configuration_value(libusb_device_handle *const device_handle) {
     return success;
 }
 
+bool claim_interface(libusb_device_handle *const device_handle) {
+    const auto error = libusb_claim_interface(device_handle, 0);
+    if (error) {
+        print_libusb_error(static_cast<libusb_error>(error), "libusb_claim_interface");
+        return false;
+    } else {
+        return true;
+    }
+}
+
+bool release_interface(libusb_device_handle *const device_handle) {
+    const auto error = libusb_release_interface(device_handle, 0);
+    if (error) {
+        print_libusb_error(static_cast<libusb_error>(error), "libusb_release_interface");
+        return false;
+    } else {
+        return true;
+    }
+}
+
 void do_somthing_with_device(libusb_device_handle *const device_handle) {
     assert(device_handle);
 
     if (!check_configuration_value(device_handle)) return;
+
+    if (!claim_interface(device_handle)) return;
+    if (!release_interface(device_handle)) return;
 }
 
 }
