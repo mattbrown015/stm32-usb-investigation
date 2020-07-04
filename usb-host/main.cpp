@@ -1,7 +1,8 @@
 #include <libusb-1.0/libusb.h>
 
-#include <cstdio>
+#include <cassert>
 #include <cinttypes>
+#include <cstdio>
 
 namespace
 {
@@ -33,7 +34,9 @@ void print_device_list(libusb_device **device_list) {
     }
 }
 
-void open_device(libusb_device **device_list, const uint16_t idVendor, const uint16_t idProduct) {
+libusb_device_handle* open_device(libusb_device **device_list, const uint16_t idVendor, const uint16_t idProduct) {
+    libusb_device_handle *device_handle = NULL;
+
     libusb_device *device_found = NULL;
     for (auto i = 0; device_list[i]; i++) {
         libusb_device *device = device_list[i];
@@ -50,7 +53,6 @@ void open_device(libusb_device **device_list, const uint16_t idVendor, const uin
 
     if (device_found) {
         printf("found device with idVendor 0x%" PRIx16 " idProduct 0x%" PRIx16 "\n", idVendor, idProduct);
-        libusb_device_handle *device_handle = NULL;
 
         const auto error = libusb_open(device_found, &device_handle);
         if (error) {
@@ -59,12 +61,24 @@ void open_device(libusb_device **device_list, const uint16_t idVendor, const uin
                 puts("'Operation not supported' error probably means Windows hasn't found a compatible driver for this device.");
                 puts("Use Zadig, https://zadig.akeo.ie/, to install the WinUSB driver for this device.");
             }
-            return;
         }
 
-        libusb_close(device_handle);
     } else {
         printf("failed to find device with idVendor 0x%" PRIx16 " idProduct 0x%" PRIx16 "\n", idVendor, idProduct);
+    }
+
+    return device_handle;
+}
+
+void do_somthing_with_device(libusb_device_handle *device_handle) {
+    assert(device_handle);
+
+    int configuration_value = 0;
+    const auto error = libusb_get_configuration(device_handle, &configuration_value);
+    if (error) {
+        printf("'libusb_get_configuration' failed, error value %d, error name '%s', error description '%s'\n", error, libusb_error_name(static_cast<libusb_error>(error)), libusb_strerror(static_cast<libusb_error>(error)));
+    } else {
+        printf("'libusb_get_configuration' succeeded, configuration value is %d", configuration_value);
     }
 }
 
@@ -91,9 +105,13 @@ int main() {
 
     print_device_list(device_list);
 
-    open_device(device_list, 0x1f00, 0x2012);
+    auto device_handle = open_device(device_list, 0x1f00, 0x2012);
 
     libusb_free_device_list(device_list, 1);
+
+    do_somthing_with_device(device_handle);
+
+    libusb_close(device_handle);
 
     libusb_exit(NULL);
 
