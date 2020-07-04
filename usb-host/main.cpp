@@ -46,8 +46,11 @@ libusb_device_handle* open_device(libusb_device **device_list, const uint16_t id
             printf("failed to get desc %d %s\n", error, libusb_strerror(static_cast<libusb_error>(error)));
         }
         if (device_descriptor.idVendor == idVendor && device_descriptor.idProduct == idProduct) {
-            device_found = device;
-            break;
+            if (device_found == NULL) {
+                device_found = device;
+            } else {
+                puts("Found another device with matching 'idVendor' and 'idProduct', only 1 device is supported at present.");
+            }
         }
     }
 
