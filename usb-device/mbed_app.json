@@ -2,6 +2,11 @@
     "target_overrides": {
         "*": {
             "platform.stdio-baud-rate": 115200
+        },
+        "NUCLEO_F767ZI": {
+            "target.macros_remove": [
+                "MBED_TICKLESS"
+            ]
         }
     }
 }
