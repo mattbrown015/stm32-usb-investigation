@@ -117,6 +117,29 @@ bool release_interface(libusb_device_handle *const device_handle) {
     }
 }
 
+bool control_transfer(libusb_device_handle *const device_handle) {
+    unsigned char data[] = { 's', 'o', 'm', 'e', ' ', 'd', 'a', 't', 'a', '\0' };
+    const auto bytes_transferred = libusb_control_transfer(
+            device_handle,
+            LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE, // bmRequestType
+            0, // bRequest
+            0, // wValue
+            0, // wIndex
+            &data[0],
+            sizeof(data), // wLength
+            1
+        );
+    if (bytes_transferred < 0) {
+        print_libusb_error(static_cast<libusb_error>(bytes_transferred), "libusb_control_transfer");
+        return false;
+    } else {
+        if (bytes_transferred != sizeof(data)) {
+            printf("bytes_transferred %d, expected %lld", bytes_transferred, sizeof(data));
+        }
+        return true;
+    }
+}
+
 void do_somthing_with_device(libusb_device_handle *const device_handle) {
     assert(device_handle);
 
@@ -124,6 +147,9 @@ void do_somthing_with_device(libusb_device_handle *const device_handle) {
 
     if (!claim_interface(device_handle)) return;
     if (!release_interface(device_handle)) return;
+
+    // Control endpoint, i.e. endpoint 0, available regardless of whether or not interface is claimed
+    if (!control_transfer(device_handle)) return;
 }
 
 }
