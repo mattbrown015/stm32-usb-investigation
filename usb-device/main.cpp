@@ -53,7 +53,7 @@ const uint8_t *MyUSBDevice::configuration_desc(uint8_t index) {
         0,                      // bAlternateSetting
         0,                      // bNumEndpoints
         0xff,                   // bInterfaceClass
-        0x00,                   // bInterfaceSubClass
+        0xff,                   // bInterfaceSubClass
         0xff,                   // bInterfaceProtocol
         0,                      // iInterface
     };
