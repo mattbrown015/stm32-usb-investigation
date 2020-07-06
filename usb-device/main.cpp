@@ -5,6 +5,10 @@
 
 #include <cstdio>
 
+// Global symbol easy to examine with debugger.
+// Arbitrary length, just needs to longer than what's sent with the request.
+uint8_t received_request_data[16] = { 0 };
+
 namespace
 {
 
@@ -66,7 +70,12 @@ void MyUSBDevice::callback_state_change(DeviceState new_state) {
 }
 
 void MyUSBDevice::callback_request(const setup_packet_t *setup) {
-    complete_request(PassThrough, NULL, 0);
+    if (setup->bmRequestType.Type == VENDOR_TYPE) {
+        MBED_ASSERT(sizeof(received_request_data) > setup->wLength);
+        complete_request(Receive, &received_request_data[0], setup->wLength);
+    } else {
+        complete_request(PassThrough, NULL, 0);
+    }
 }
 
 void MyUSBDevice::callback_request_xfer_done(const setup_packet_t *setup, bool aborted) {
