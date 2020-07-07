@@ -71,7 +71,7 @@ void MyUSBDevice::callback_state_change(DeviceState new_state) {
 
 void MyUSBDevice::callback_request(const setup_packet_t *setup) {
     if (setup->bmRequestType.Type == VENDOR_TYPE) {
-        MBED_ASSERT(sizeof(received_request_data) > setup->wLength);
+        MBED_ASSERT(sizeof(received_request_data) >= setup->wLength);
         complete_request(Receive, &received_request_data[0], setup->wLength);
     } else {
         complete_request(PassThrough, NULL, 0);
