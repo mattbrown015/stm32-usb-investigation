@@ -3,6 +3,7 @@
 #include <hal/usb/usb_phy_api.h>
 #include <rtos/ThisThread.h>
 
+#include <algorithm>
 #include <cstdio>
 
 // Global symbol easy to examine with debugger.
@@ -71,8 +72,20 @@ void MyUSBDevice::callback_state_change(DeviceState new_state) {
 
 void MyUSBDevice::callback_request(const setup_packet_t *setup) {
     if (setup->bmRequestType.Type == VENDOR_TYPE) {
-        MBED_ASSERT(sizeof(received_request_data) >= setup->wLength);
-        complete_request(Receive, &received_request_data[0], setup->wLength);
+        if (setup->bmRequestType.dataTransferDirection == 0) {
+            MBED_ASSERT(sizeof(received_request_data) >= setup->wLength);
+            complete_request(Receive, &received_request_data[0], setup->wLength);
+        } else if (setup->bmRequestType.dataTransferDirection == 1) {
+            // "If the USB component calls complete_request with a buffer and size,
+            // that buffer must remain valid and unchanged until USBDevice calls the function callback_request_xfer_done."
+            // The easiest way to achieve this is to make it static.
+            static uint8_t send_request_data[] = { 's', 'e', 'n', 'd', ' ', 'r', 'e', 'q', 'u', 'e', 's', 't', '\0' };
+            // The transfer might not request the entire buffer, which is fine.
+            const auto size = std::min<uint32_t>(setup->wLength, sizeof(send_request_data));
+            complete_request(Send, &send_request_data[0], size);
+        } else {
+            MBED_ASSERT(false);
+        }
     } else {
         complete_request(PassThrough, NULL, 0);
     }
