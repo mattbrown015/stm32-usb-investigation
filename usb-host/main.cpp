@@ -134,7 +134,7 @@ bool control_transfer(libusb_device_handle *const device_handle) {
         return false;
     } else {
         if (bytes_transferred != sizeof(data)) {
-            printf("bytes_transferred %d, expected %lld", bytes_transferred, sizeof(data));
+            printf("bytes_transferred %d, expected %lld\n", bytes_transferred, sizeof(data));
         }
         return true;
     }
