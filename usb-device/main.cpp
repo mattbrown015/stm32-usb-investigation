@@ -67,10 +67,12 @@ const uint8_t *MyUSBDevice::configuration_desc(uint8_t index) {
 }
 
 void MyUSBDevice::callback_state_change(DeviceState new_state) {
-
+    assert_locked();
 }
 
 void MyUSBDevice::callback_request(const setup_packet_t *setup) {
+    assert_locked();
+
     if (setup->bmRequestType.Type == VENDOR_TYPE) {
         if (setup->bmRequestType.dataTransferDirection == 0) {
             MBED_ASSERT(sizeof(received_request_data) >= setup->wLength);
@@ -92,14 +94,17 @@ void MyUSBDevice::callback_request(const setup_packet_t *setup) {
 }
 
 void MyUSBDevice::callback_request_xfer_done(const setup_packet_t *setup, bool aborted) {
+    assert_locked();
     complete_request_xfer_done(!aborted);
 }
 
 void MyUSBDevice::callback_set_configuration(uint8_t configuration) {
+    assert_locked();
     complete_set_configuration(true);
 }
 
 void MyUSBDevice::callback_set_interface(uint16_t interface, uint8_t alternate) {
+    assert_locked();
     complete_set_interface(true);
 }
 
