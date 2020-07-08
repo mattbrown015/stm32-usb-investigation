@@ -7,7 +7,7 @@
             "type": "shell",
             "label": "build",
             "command": "mbed",
-            "args": ["compile"],
+            "args": ["compile", "--profile=mbed-os/tools/profiles/debug.json"],
             "problemMatcher": [
                 "$gcc"
             ],
