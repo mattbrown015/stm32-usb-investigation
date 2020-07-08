@@ -87,7 +87,7 @@ void MyUSBDevice::callback_request(const setup_packet_t *setup) {
             MBED_ASSERT(false);
         }
     } else {
-        complete_request(PassThrough, NULL, 0);
+        complete_request(PassThrough);
     }
 }
 
