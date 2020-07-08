@@ -16,16 +16,16 @@ namespace
 class MyUSBDevice : public USBDevice {
 public:
     MyUSBDevice();
-    ~MyUSBDevice();
+    ~MyUSBDevice() override;
 
 protected:
-    const uint8_t *configuration_desc(uint8_t index);
+    const uint8_t *configuration_desc(uint8_t index) override;
 
-    void callback_state_change(DeviceState new_state);
-    void callback_request(const setup_packet_t *setup);
-    void callback_request_xfer_done(const setup_packet_t *setup, bool aborted);
-    void callback_set_configuration(uint8_t configuration);
-    void callback_set_interface(uint16_t interface, uint8_t alternate);
+    void callback_state_change(DeviceState new_state) override;
+    void callback_request(const setup_packet_t *setup) override;
+    void callback_request_xfer_done(const setup_packet_t *setup, bool aborted) override;
+    void callback_set_configuration(uint8_t configuration) override;
+    void callback_set_interface(uint16_t interface, uint8_t alternate) override;
 };
 
 MyUSBDevice::MyUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) {
