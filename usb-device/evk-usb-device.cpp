@@ -73,6 +73,10 @@ const uint8_t *EvkUSBDevice::configuration_desc(uint8_t index) {
 
 void EvkUSBDevice::callback_state_change(DeviceState new_state) {
     assert_locked();
+
+    if (new_state == DeviceState::Configured) {
+        configured.release();
+    }
 }
 
 void EvkUSBDevice::callback_request(const setup_packet_t *setup) {

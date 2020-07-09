@@ -2,6 +2,7 @@
 #define EVKUSBDEVICE_H
 
 #include <drivers/internal/USBDevice.h>
+#include <rtos/Semaphore.h>
 
 namespace EvkUSBDevice
 {
@@ -10,6 +11,8 @@ class EvkUSBDevice : public USBDevice {
 public:
     EvkUSBDevice();
     ~EvkUSBDevice() override;
+
+    rtos::Semaphore configured;
 
 protected:
     const uint8_t *configuration_desc(uint8_t index) override;
