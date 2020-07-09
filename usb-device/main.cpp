@@ -46,6 +46,7 @@ MyUSBDevice::MyUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) {
     EndpointResolver resolver(endpoint_table());
     resolver.endpoint_ctrl(maximum_packet_size);
     epbulk_in = resolver.endpoint_in(USB_EP_TYPE_BULK, maximum_packet_size);
+    MBED_ASSERT(epbulk_in != 0); // Possibly covered by 'resolver.valid' but so what if it is /belt and braces/!
     MBED_ASSERT(resolver.valid());
 
     connect();
@@ -135,7 +136,8 @@ void MyUSBDevice::callback_set_configuration(uint8_t configuration) {
 
     auto success = false;
     if (configuration == default_configuration) {
-        endpoint_add(epbulk_in, maximum_packet_size, USB_EP_TYPE_BULK, &MyUSBDevice::epbulk_in_callback);
+        MBED_UNUSED const auto add_epbulk_in_res = endpoint_add(epbulk_in, maximum_packet_size, USB_EP_TYPE_BULK, &MyUSBDevice::epbulk_in_callback);
+        MBED_ASSERT(add_epbulk_in_res);
 
         success = true;
     }
