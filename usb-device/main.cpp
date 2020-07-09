@@ -26,6 +26,11 @@ protected:
     void callback_request_xfer_done(const setup_packet_t *setup, bool aborted) override;
     void callback_set_configuration(uint8_t configuration) override;
     void callback_set_interface(uint16_t interface, uint8_t alternate) override;
+
+private:
+    static const uint8_t default_configuration = 1;
+    static const size_t configuration_descriptor_length = 18;
+    uint8_t configuration_descriptor[configuration_descriptor_length];
 };
 
 MyUSBDevice::MyUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) {
@@ -37,9 +42,7 @@ MyUSBDevice::~MyUSBDevice() {
 }
 
 const uint8_t *MyUSBDevice::configuration_desc(uint8_t index) {
-    const uint8_t default_configuration = 1;
-    const size_t configuration_descriptor_length = 18;
-    static const uint8_t configuration_descriptor[configuration_descriptor_length] = {
+    const uint8_t configuration_descriptor_temp[configuration_descriptor_length] = {
         // configuration descriptor, USB spec 9.6.3
         CONFIGURATION_DESCRIPTOR_LENGTH, // bLength
         CONFIGURATION_DESCRIPTOR, // bDescriptorType
@@ -63,6 +66,8 @@ const uint8_t *MyUSBDevice::configuration_desc(uint8_t index) {
         0,                      // iInterface
     };
 
+    MBED_ASSERT(sizeof(configuration_descriptor_temp) == sizeof(configuration_descriptor));
+    memcpy(configuration_descriptor, configuration_descriptor_temp, sizeof(configuration_descriptor));
     return &configuration_descriptor[0];
 }
 
