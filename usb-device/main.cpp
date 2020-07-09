@@ -1,3 +1,4 @@
+#include <drivers/internal/EndpointResolver.h>
 #include <drivers/internal/USBDescriptor.h>
 #include <drivers/internal/USBDevice.h>
 #include <hal/usb/usb_phy_api.h>
@@ -28,12 +29,25 @@ protected:
     void callback_set_interface(uint16_t interface, uint8_t alternate) override;
 
 private:
+    // The derivation of the maximum packet size is not yet clear to me.
+    // 64 appears a great deal in the examples so it is what I'm using for now.
+    static const auto maximum_packet_size = 64;
+
     static const uint8_t default_configuration = 1;
-    static const size_t configuration_descriptor_length = 18;
+    static const size_t configuration_descriptor_length = 25;
     uint8_t configuration_descriptor[configuration_descriptor_length];
+
+    usb_ep_t epbulk_in;
+
+    void epbulk_in_callback();
 };
 
 MyUSBDevice::MyUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) {
+    EndpointResolver resolver(endpoint_table());
+    resolver.endpoint_ctrl(maximum_packet_size);
+    epbulk_in = resolver.endpoint_in(USB_EP_TYPE_BULK, maximum_packet_size);
+    MBED_ASSERT(resolver.valid());
+
     connect();
 }
 
@@ -59,11 +73,20 @@ const uint8_t *MyUSBDevice::configuration_desc(uint8_t index) {
         INTERFACE_DESCRIPTOR,   // bDescriptorType
         0,                      // bInterfaceNumber
         0,                      // bAlternateSetting
-        0,                      // bNumEndpoints
+        1,                      // bNumEndpoints
         0xff,                   // bInterfaceClass
         0xff,                   // bInterfaceSubClass
         0xff,                   // bInterfaceProtocol
         0,                      // iInterface
+
+        // endpoint descriptor, USB spec 9.6.6
+        ENDPOINT_DESCRIPTOR_LENGTH, // bLength
+        ENDPOINT_DESCRIPTOR,    // bDescriptorType
+        epbulk_in,              // bEndpointAddress
+        E_BULK,                 // bmAttributes
+        LSB(maximum_packet_size), // wMaxPacketSize
+        MSB(maximum_packet_size),
+        1,                      // bInterval
     };
 
     if (index == 0) {
@@ -109,12 +132,18 @@ void MyUSBDevice::callback_request_xfer_done(const setup_packet_t *setup, bool a
 
 void MyUSBDevice::callback_set_configuration(uint8_t configuration) {
     assert_locked();
+
+    endpoint_add(epbulk_in, maximum_packet_size, USB_EP_TYPE_BULK, &MyUSBDevice::epbulk_in_callback);
     complete_set_configuration(true);
 }
 
 void MyUSBDevice::callback_set_interface(uint16_t interface, uint8_t alternate) {
     assert_locked();
     complete_set_interface(true);
+}
+
+void MyUSBDevice::epbulk_in_callback() {
+    assert_locked();
 }
 
 }
