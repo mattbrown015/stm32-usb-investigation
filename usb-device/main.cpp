@@ -133,8 +133,14 @@ void MyUSBDevice::callback_request_xfer_done(const setup_packet_t *setup, bool a
 void MyUSBDevice::callback_set_configuration(uint8_t configuration) {
     assert_locked();
 
-    endpoint_add(epbulk_in, maximum_packet_size, USB_EP_TYPE_BULK, &MyUSBDevice::epbulk_in_callback);
-    complete_set_configuration(true);
+    auto success = false;
+    if (configuration == default_configuration) {
+        endpoint_add(epbulk_in, maximum_packet_size, USB_EP_TYPE_BULK, &MyUSBDevice::epbulk_in_callback);
+
+        success = true;
+    }
+
+    complete_set_configuration(success);
 }
 
 void MyUSBDevice::callback_set_interface(uint16_t interface, uint8_t alternate) {
