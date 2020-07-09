@@ -4,10 +4,15 @@
 
 #include <cstdio>
 
+namespace
+{
+
+EvkUSBDevice::EvkUSBDevice evk_usb_device;
+
+}
+
 int main() {
     printf("usb-device\n");
-
-    EvkUSBDevice::EvkUSBDevice evk_usb_device;
 
     while (1) {
         printf("still running...\n");
