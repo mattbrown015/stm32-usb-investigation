@@ -66,9 +66,13 @@ const uint8_t *MyUSBDevice::configuration_desc(uint8_t index) {
         0,                      // iInterface
     };
 
-    MBED_ASSERT(sizeof(configuration_descriptor_temp) == sizeof(configuration_descriptor));
-    memcpy(configuration_descriptor, configuration_descriptor_temp, sizeof(configuration_descriptor));
-    return &configuration_descriptor[0];
+    if (index == 0) {
+        MBED_ASSERT(sizeof(configuration_descriptor_temp) == sizeof(configuration_descriptor));
+        memcpy(configuration_descriptor, configuration_descriptor_temp, sizeof(configuration_descriptor));
+        return &configuration_descriptor[0];
+    } else {
+        return nullptr;
+    }
 }
 
 void MyUSBDevice::callback_state_change(DeviceState new_state) {
