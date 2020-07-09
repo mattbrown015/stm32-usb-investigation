@@ -14,7 +14,7 @@ public:
 
     rtos::Semaphore configured;
 
-protected:
+private:
     const uint8_t *configuration_desc(uint8_t index) override;
 
     void callback_state_change(DeviceState new_state) override;
