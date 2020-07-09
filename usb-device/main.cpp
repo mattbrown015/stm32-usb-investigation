@@ -14,10 +14,10 @@ uint8_t received_request_data[16] = { 0 };
 namespace
 {
 
-class MyUSBDevice : public USBDevice {
+class EvkUSBDevice : public USBDevice {
 public:
-    MyUSBDevice();
-    ~MyUSBDevice() override;
+    EvkUSBDevice();
+    ~EvkUSBDevice() override;
 
 protected:
     const uint8_t *configuration_desc(uint8_t index) override;
@@ -42,7 +42,7 @@ private:
     void epbulk_in_callback();
 };
 
-MyUSBDevice::MyUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) {
+EvkUSBDevice::EvkUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) {
     EndpointResolver resolver(endpoint_table());
     resolver.endpoint_ctrl(maximum_packet_size);
     epbulk_in = resolver.endpoint_in(USB_EP_TYPE_BULK, maximum_packet_size);
@@ -52,11 +52,11 @@ MyUSBDevice::MyUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) {
     connect();
 }
 
-MyUSBDevice::~MyUSBDevice() {
+EvkUSBDevice::~EvkUSBDevice() {
     deinit();
 }
 
-const uint8_t *MyUSBDevice::configuration_desc(uint8_t index) {
+const uint8_t *EvkUSBDevice::configuration_desc(uint8_t index) {
     const uint8_t configuration_descriptor_temp[configuration_descriptor_length] = {
         // configuration descriptor, USB spec 9.6.3
         CONFIGURATION_DESCRIPTOR_LENGTH, // bLength
@@ -99,11 +99,11 @@ const uint8_t *MyUSBDevice::configuration_desc(uint8_t index) {
     }
 }
 
-void MyUSBDevice::callback_state_change(DeviceState new_state) {
+void EvkUSBDevice::callback_state_change(DeviceState new_state) {
     assert_locked();
 }
 
-void MyUSBDevice::callback_request(const setup_packet_t *setup) {
+void EvkUSBDevice::callback_request(const setup_packet_t *setup) {
     assert_locked();
 
     if (setup->bmRequestType.Type == VENDOR_TYPE) {
@@ -126,17 +126,17 @@ void MyUSBDevice::callback_request(const setup_packet_t *setup) {
     }
 }
 
-void MyUSBDevice::callback_request_xfer_done(const setup_packet_t *setup, bool aborted) {
+void EvkUSBDevice::callback_request_xfer_done(const setup_packet_t *setup, bool aborted) {
     assert_locked();
     complete_request_xfer_done(!aborted);
 }
 
-void MyUSBDevice::callback_set_configuration(uint8_t configuration) {
+void EvkUSBDevice::callback_set_configuration(uint8_t configuration) {
     assert_locked();
 
     auto success = false;
     if (configuration == default_configuration) {
-        MBED_UNUSED const auto add_epbulk_in_res = endpoint_add(epbulk_in, maximum_packet_size, USB_EP_TYPE_BULK, &MyUSBDevice::epbulk_in_callback);
+        MBED_UNUSED const auto add_epbulk_in_res = endpoint_add(epbulk_in, maximum_packet_size, USB_EP_TYPE_BULK, &EvkUSBDevice::epbulk_in_callback);
         MBED_ASSERT(add_epbulk_in_res);
 
         success = true;
@@ -145,12 +145,12 @@ void MyUSBDevice::callback_set_configuration(uint8_t configuration) {
     complete_set_configuration(success);
 }
 
-void MyUSBDevice::callback_set_interface(uint16_t interface, uint8_t alternate) {
+void EvkUSBDevice::callback_set_interface(uint16_t interface, uint8_t alternate) {
     assert_locked();
     complete_set_interface(true);
 }
 
-void MyUSBDevice::epbulk_in_callback() {
+void EvkUSBDevice::epbulk_in_callback() {
     assert_locked();
 }
 
@@ -159,7 +159,7 @@ void MyUSBDevice::epbulk_in_callback() {
 int main() {
     printf("usb-device\n");
 
-    MyUSBDevice my_usb_device;
+    EvkUSBDevice evk_usb_device;
 
     while (1) {
         printf("still running...\n");
