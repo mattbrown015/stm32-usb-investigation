@@ -17,19 +17,19 @@ EvkUSBDevice::EvkUSBDevice evk_usb_device;
 void wait_until_configured() {
     evk_usb_device.configured.acquire();
 
-    printf("EvkUSBDevice configured\n");
+    puts("EvkUSBDevice configured");
 }
 
 }
 
 int main() {
-    printf("usb-device\n");
+    puts("usb-device");
 
     MBED_UNUSED const osStatus status = thread.start(wait_until_configured);
     MBED_ASSERT(status == osOK);
 
     while (1) {
-        printf("still running...\n");
+        puts("still running...");
         rtos::ThisThread::sleep_for(1000);
     }
 }
