@@ -47,6 +47,8 @@
                 "DEVICE_USTICKER=1",
                 "DEVICE_WATCHDOG=1",
                 "EXTRA_IDLE_STACK_REQUIRED",
+                "MBED_DEBUG",
+                "MBED_TRAP_ERRORS_ENABLED=1",
                 "STM32F767xx",
                 "TARGET_CORTEX_M",
                 "TARGET_CORTEX",
