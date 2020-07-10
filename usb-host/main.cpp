@@ -9,6 +9,7 @@ namespace
 
 const uint8_t invalid_ep_address = 0xff;
 uint8_t epbulk_in = invalid_ep_address;
+uint8_t epbulk_out = invalid_ep_address;
 
 void print_libusb_error(const libusb_error error, const char *const libusb_api_function)  {
     printf("'%s' failed, error value %d, error name '%s', error description '%s'\n", libusb_api_function, error, libusb_error_name(error), libusb_strerror(error));
@@ -84,12 +85,33 @@ bool get_endpoint_addresses(libusb_device *const device) {
         const bool is_bulk = bmAttributes == LIBUSB_TRANSFER_TYPE_BULK;
         if (is_in && is_bulk) {
             epbulk_in = bEndpointAddress;
+            break;
         }
 
         ++endpoint_descriptor;
     }
     if (epbulk_in == invalid_ep_address) {
         puts("failed to find bulk in endpoint");
+        goto free_and_exit;
+    }
+
+    endpoint_descriptor = config_descriptor->interface->altsetting->endpoint;
+    for (auto i = 0; i < interface_descriptor->bNumEndpoints; ++i) {
+        const auto bEndpointAddress = endpoint_descriptor->bEndpointAddress;
+        const auto bmAttributes = endpoint_descriptor->bmAttributes;
+        printf("bEndpointAddress 0x%" PRIx8 " bmAttributes 0x%" PRIx8 "\n", bEndpointAddress, bmAttributes);
+
+        const bool is_out = (bEndpointAddress & LIBUSB_ENDPOINT_IN) == LIBUSB_ENDPOINT_OUT;
+        const bool is_bulk = bmAttributes == LIBUSB_TRANSFER_TYPE_BULK;
+        if (is_out && is_bulk) {
+            epbulk_out = bEndpointAddress;
+            break;
+        }
+
+        ++endpoint_descriptor;
+    }
+    if (epbulk_out == invalid_ep_address) {
+        puts("failed to find bulk out endpoint");
         goto free_and_exit;
     }
 
