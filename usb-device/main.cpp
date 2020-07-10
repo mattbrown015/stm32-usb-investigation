@@ -1,4 +1,5 @@
 #include "evk-usb-device.h"
+#include "show-running.h"
 
 #include <rtos/ThisThread.h>
 #include <rtos/Thread.h>
@@ -43,11 +44,10 @@ void wait_until_configured() {
 int main() {
     puts("usb-device");
 
+    show_running::init();
+
     MBED_UNUSED const osStatus status = thread.start(wait_until_configured);
     MBED_ASSERT(status == osOK);
 
-    while (1) {
-        puts("still running...");
-        rtos::ThisThread::sleep_for(1000);
-    }
+    rtos::ThisThread::sleep_for(osWaitForever);
 }
