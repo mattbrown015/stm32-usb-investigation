@@ -35,6 +35,7 @@ private:
 
     usb_ep_t epbulk_in;
     usb_ep_t epbulk_out;
+    uint8_t epbulk_out_buffer[maximum_packet_size];
 
     void epbulk_in_callback();
     void epbulk_out_callback();

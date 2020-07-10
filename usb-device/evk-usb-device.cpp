@@ -158,6 +158,9 @@ void EvkUSBDevice::callback_set_configuration(uint8_t configuration) {
         MBED_UNUSED const auto add_epbulk_out_res = endpoint_add(epbulk_out, maximum_packet_size, USB_EP_TYPE_BULK, &EvkUSBDevice::epbulk_out_callback);
         MBED_ASSERT(add_epbulk_out_res);
 
+        MBED_UNUSED const auto read_start_result = read_start(epbulk_out, &epbulk_out_buffer[0], sizeof(epbulk_out_buffer));
+        MBED_ASSERT(read_start_result);
+
         success = true;
     }
 
