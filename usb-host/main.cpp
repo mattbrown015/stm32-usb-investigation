@@ -64,7 +64,7 @@ bool get_endpoint_addresses(libusb_device *const device) {
         goto free_and_exit;
     }
 
-    if (config_descriptor->interface->altsetting->bNumEndpoints != 1) {
+    if (config_descriptor->interface->altsetting->bNumEndpoints != 2) {
         printf("unexpected number of endpoints %" PRIi8 "\n", config_descriptor->interface->altsetting->bNumEndpoints);
         goto free_and_exit;
     }
