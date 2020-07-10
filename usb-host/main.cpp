@@ -85,6 +85,8 @@ bool get_endpoint_addresses(libusb_device *const device) {
         if (is_in && is_bulk) {
             epbulk_in = bEndpointAddress;
         }
+
+        ++endpoint_descriptor;
     }
     if (epbulk_in == invalid_ep_address) {
         puts("failed to find bulk in endpoint");
