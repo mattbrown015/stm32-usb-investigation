@@ -165,12 +165,12 @@ void do_somthing_with_device(libusb_device_handle *const device_handle) {
 
     if (!check_configuration_value(device_handle)) return;
 
-    if (!claim_interface(device_handle)) return;
-    if (!release_interface(device_handle)) return;
-
     // Control endpoint, i.e. endpoint 0, available regardless of whether or not interface is claimed
     if (!control_transfer_out(device_handle)) return;
     if (!control_transfer_in(device_handle)) return;
+
+    if (!claim_interface(device_handle)) return;
+    if (!release_interface(device_handle)) return;
 }
 
 }
