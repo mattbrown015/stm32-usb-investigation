@@ -7,6 +7,9 @@
 namespace
 {
 
+const uint8_t invalid_ep_address = 0xff;
+uint8_t epbulk_in = invalid_ep_address;
+
 void print_libusb_error(const libusb_error error, const char *const libusb_api_function)  {
     printf("'%s' failed, error value %d, error name '%s', error description '%s'\n", libusb_api_function, error, libusb_error_name(error), libusb_strerror(error));
 }
@@ -38,6 +41,52 @@ void print_device_list(libusb_device **device_list) {
         }
         putchar('\n');
     }
+}
+
+bool get_endpoint_addresses(libusb_device *const device) {
+    assert(device);
+
+    auto success = false;
+
+    libusb_config_descriptor *config_descriptor;
+    const auto error = libusb_get_config_descriptor(device, 0, &config_descriptor);
+    if (error < 0) {
+        print_libusb_error(static_cast<libusb_error>(error), "libusb_get_device_descriptor");
+        return false;
+    }
+
+    if (config_descriptor->bNumInterfaces != 1) {
+        printf("unexpected number of interfaces %" PRIi8 "\n", config_descriptor->bNumInterfaces);
+        goto free_and_exit;
+    }
+    if (config_descriptor->interface->num_altsetting != 1) {
+        printf("unexpected number of alternate settings %" PRIi8 "\n", config_descriptor->interface->num_altsetting);
+        goto free_and_exit;
+    }
+
+    if (config_descriptor->interface->altsetting->bNumEndpoints != 1) {
+        printf("unexpected number of endpoints %" PRIi8 "\n", config_descriptor->interface->altsetting->bNumEndpoints);
+        goto free_and_exit;
+    }
+
+    {
+        const auto bEndpointAddress = config_descriptor->interface->altsetting->endpoint->bEndpointAddress;
+        const auto bmAttributes = config_descriptor->interface->altsetting->endpoint->bmAttributes;
+        printf("bEndpointAddress 0x%" PRIx8 " bmAttributes 0x%" PRIx8 "\n", bEndpointAddress, bmAttributes);
+
+        const bool is_in = (bEndpointAddress & LIBUSB_ENDPOINT_IN) == LIBUSB_ENDPOINT_IN;
+        const bool is_bulk = bmAttributes == LIBUSB_TRANSFER_TYPE_BULK;
+        if (!is_in || !is_bulk) {
+            puts("endpoint is not 'in' and/or not 'bulk'");
+            goto free_and_exit;
+        }
+        epbulk_in = bEndpointAddress;
+    }
+
+    success = true;
+free_and_exit:
+    libusb_free_config_descriptor(config_descriptor);
+    return success;
 }
 
 libusb_device_handle* open_device(libusb_device **device_list, const uint16_t idVendor, const uint16_t idProduct) {
@@ -72,6 +121,9 @@ libusb_device_handle* open_device(libusb_device **device_list, const uint16_t id
             }
         }
 
+        if (!get_endpoint_addresses(device_found)) {
+            return 0;
+        }
     } else {
         printf("failed to find device with idVendor 0x%" PRIx16 " idProduct 0x%" PRIx16 "\n", idVendor, idProduct);
     }
@@ -161,11 +213,13 @@ bool control_transfer_in(libusb_device_handle *const device_handle) {
 }
 
 bool bulk_transfer_in(libusb_device_handle *const device_handle) {
+    assert(epbulk_in != invalid_ep_address);
+
     unsigned char data[64] = { 0 };
     int transferred = 0;
     const auto error = libusb_bulk_transfer(
             device_handle,
-            LIBUSB_ENDPOINT_IN | 1, // endpoint - I can see from debugging the device that the endpoint number is 1, although I suspect I should find it programmatically
+            epbulk_in,
             &data[0],
             sizeof(data),
             &transferred,
