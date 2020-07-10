@@ -30,12 +30,14 @@ private:
     static const auto maximum_packet_size = 64;
 
     static const uint8_t default_configuration = 1;
-    static const size_t configuration_descriptor_length = 25;
+    static const size_t configuration_descriptor_length = 32;
     uint8_t configuration_descriptor[configuration_descriptor_length];
 
     usb_ep_t epbulk_in;
+    usb_ep_t epbulk_out;
 
     void epbulk_in_callback();
+    void epbulk_out_callback();
 };
 
 }

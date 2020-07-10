@@ -30,6 +30,8 @@ EvkUSBDevice::EvkUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) 
     resolver.endpoint_ctrl(maximum_packet_size);
     epbulk_in = resolver.endpoint_in(USB_EP_TYPE_BULK, maximum_packet_size);
     MBED_ASSERT(epbulk_in != 0); // Possibly covered by 'resolver.valid' but so what if it is /belt and braces/!
+    epbulk_out = resolver.endpoint_out(USB_EP_TYPE_BULK, maximum_packet_size);
+    MBED_ASSERT(epbulk_out != 0); // Possibly covered by 'resolver.valid' but so what if it is /belt and braces/!
     MBED_ASSERT(resolver.valid());
 
     connect();
@@ -76,7 +78,7 @@ const uint8_t *EvkUSBDevice::configuration_desc(uint8_t index) {
         INTERFACE_DESCRIPTOR,   // bDescriptorType
         0,                      // bInterfaceNumber
         0,                      // bAlternateSetting
-        1,                      // bNumEndpoints
+        2,                      // bNumEndpoints
         0xff,                   // bInterfaceClass
         0xff,                   // bInterfaceSubClass
         0xff,                   // bInterfaceProtocol
@@ -86,6 +88,14 @@ const uint8_t *EvkUSBDevice::configuration_desc(uint8_t index) {
         ENDPOINT_DESCRIPTOR_LENGTH, // bLength
         ENDPOINT_DESCRIPTOR,    // bDescriptorType
         epbulk_in,              // bEndpointAddress
+        E_BULK,                 // bmAttributes
+        LSB(maximum_packet_size), // wMaxPacketSize
+        MSB(maximum_packet_size),
+        1,                      // bInterval
+
+        ENDPOINT_DESCRIPTOR_LENGTH, // bLength
+        ENDPOINT_DESCRIPTOR,    // bDescriptorType
+        epbulk_out,             // bEndpointAddress
         E_BULK,                 // bmAttributes
         LSB(maximum_packet_size), // wMaxPacketSize
         MSB(maximum_packet_size),
@@ -145,6 +155,8 @@ void EvkUSBDevice::callback_set_configuration(uint8_t configuration) {
     if (configuration == default_configuration) {
         MBED_UNUSED const auto add_epbulk_in_res = endpoint_add(epbulk_in, maximum_packet_size, USB_EP_TYPE_BULK, &EvkUSBDevice::epbulk_in_callback);
         MBED_ASSERT(add_epbulk_in_res);
+        MBED_UNUSED const auto add_epbulk_out_res = endpoint_add(epbulk_out, maximum_packet_size, USB_EP_TYPE_BULK, &EvkUSBDevice::epbulk_out_callback);
+        MBED_ASSERT(add_epbulk_out_res);
 
         success = true;
     }
@@ -162,6 +174,10 @@ void EvkUSBDevice::epbulk_in_callback() {
 
     MBED_UNUSED const auto result = event_flags.set(write_finished_flag);
     MBED_ASSERT(!(result & osFlagsError));
+}
+
+void EvkUSBDevice::epbulk_out_callback() {
+    assert_locked();
 }
 
 }
