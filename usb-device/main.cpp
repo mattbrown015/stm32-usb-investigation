@@ -3,7 +3,10 @@
 #include <rtos/ThisThread.h>
 #include <rtos/Thread.h>
 
+#include <array>
+#include <cinttypes>
 #include <cstdio>
+#include <numeric>
 
 namespace
 {
@@ -16,8 +19,13 @@ EvkUSBDevice::EvkUSBDevice evk_usb_device;
 
 void wait_until_configured() {
     evk_usb_device.wait_configured();
-
     puts("EvkUSBDevice configured");
+
+    puts("perform bulk in transfer");
+    std::array<unsigned char, 64> buffer;
+    std::iota(std::begin(buffer), std::end(buffer), 1);
+    const auto number_of_bytes_transferred = evk_usb_device.bulk_in_transfer(buffer.data(), buffer.size());
+    printf("number_of_bytes_transferred %" PRIi32 "\n", number_of_bytes_transferred);
 }
 
 }

@@ -21,6 +21,7 @@ namespace
 rtos::EventFlags event_flags("EvkUSBDevice");
 
 const uint32_t configured_flag = 1 << 0;
+const uint32_t write_finished_flag = 1 << 1;
 
 }
 
@@ -41,6 +42,20 @@ EvkUSBDevice::~EvkUSBDevice() {
 void EvkUSBDevice::wait_configured() {
     MBED_UNUSED const auto result = event_flags.wait_all(configured_flag);
     MBED_ASSERT(!(result & osFlagsError));
+}
+
+uint32_t EvkUSBDevice::bulk_in_transfer(uint8_t *const buffer, const uint32_t size) {
+    MBED_UNUSED const auto clear_result = event_flags.clear(write_finished_flag);
+    MBED_ASSERT(!(clear_result & osFlagsError));
+
+    if (!write_start(epbulk_in, buffer, size)) {
+        return 0;
+    };
+
+    MBED_UNUSED const auto wait_result = event_flags.wait_all(write_finished_flag);
+    MBED_ASSERT(!(wait_result & osFlagsError));
+
+    return write_finish(epbulk_in);
 }
 
 const uint8_t *EvkUSBDevice::configuration_desc(uint8_t index) {
@@ -144,6 +159,9 @@ void EvkUSBDevice::callback_set_interface(uint16_t interface, uint8_t alternate)
 
 void EvkUSBDevice::epbulk_in_callback() {
     assert_locked();
+
+    MBED_UNUSED const auto result = event_flags.set(write_finished_flag);
+    MBED_ASSERT(!(result & osFlagsError));
 }
 
 }

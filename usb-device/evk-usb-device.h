@@ -13,6 +13,8 @@ public:
 
     void wait_configured();
 
+    uint32_t bulk_in_transfer(uint8_t *buffer, uint32_t size);
+
 private:
     const uint8_t *configuration_desc(uint8_t index) override;
 
