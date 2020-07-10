@@ -22,6 +22,7 @@ rtos::EventFlags event_flags("EvkUSBDevice");
 
 const uint32_t configured_flag = 1 << 0;
 const uint32_t write_finished_flag = 1 << 1;
+const uint32_t read_finished_flag = 1 << 2;
 
 }
 
@@ -58,6 +59,26 @@ uint32_t EvkUSBDevice::bulk_in_transfer(uint8_t *const buffer, const uint32_t si
     MBED_ASSERT(!(wait_result & osFlagsError));
 
     return write_finish(epbulk_in);
+}
+
+uint32_t EvkUSBDevice::bulk_out_transfer(uint8_t *const buffer, const uint32_t size) {
+    MBED_UNUSED const auto wait_result = event_flags.wait_all(read_finished_flag);
+    MBED_ASSERT(!(wait_result & osFlagsError));
+
+    lock();
+
+    const auto bytes_in_buffer = std::min(size, epbulk_out_buffer_bytes_available);
+    memcpy(buffer, epbulk_out_buffer, bytes_in_buffer);
+
+    MBED_UNUSED const auto read_start_result = read_start(epbulk_out, &epbulk_out_buffer[0], sizeof(epbulk_out_buffer));
+    MBED_ASSERT(read_start_result);
+
+    MBED_UNUSED const auto clear_result = event_flags.clear(read_finished_flag);
+    MBED_ASSERT(!(clear_result & osFlagsError));
+
+    unlock();
+
+    return bytes_in_buffer;
 }
 
 const uint8_t *EvkUSBDevice::configuration_desc(uint8_t index) {
@@ -181,6 +202,11 @@ void EvkUSBDevice::epbulk_in_callback() {
 
 void EvkUSBDevice::epbulk_out_callback() {
     assert_locked();
+
+    epbulk_out_buffer_bytes_available = read_finish(epbulk_out);
+
+    MBED_UNUSED const auto result = event_flags.set(read_finished_flag);
+    MBED_ASSERT(!(result & osFlagsError));
 }
 
 }

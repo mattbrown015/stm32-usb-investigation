@@ -26,6 +26,16 @@ void wait_until_configured() {
     std::iota(std::begin(buffer), std::end(buffer), 1);
     const auto number_of_bytes_transferred = evk_usb_device.bulk_in_transfer(buffer.data(), buffer.size());
     printf("number_of_bytes_transferred %" PRIi32 "\n", number_of_bytes_transferred);
+
+    puts("perform bulk out transfer");
+    buffer.fill(0);
+    const auto out_number_of_bytes_transferred = evk_usb_device.bulk_out_transfer(buffer.data(), buffer.size());
+    printf("out_number_of_bytes_transferred %" PRIi32 "\n", out_number_of_bytes_transferred);
+
+    for (auto i = 0u; i < buffer.size(); ++i) {
+        printf("0x%02" PRIx8 " ", buffer[i]);
+    }
+    putchar('\n');
 }
 
 }

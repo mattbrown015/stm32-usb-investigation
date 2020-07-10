@@ -14,6 +14,7 @@ public:
     void wait_configured();
 
     uint32_t bulk_in_transfer(uint8_t *buffer, uint32_t size);
+    uint32_t bulk_out_transfer(uint8_t *buffer, uint32_t size);
 
 private:
     const uint8_t *configuration_desc(uint8_t index) override;
@@ -36,6 +37,7 @@ private:
     usb_ep_t epbulk_in;
     usb_ep_t epbulk_out;
     uint8_t epbulk_out_buffer[maximum_packet_size];
+    uint32_t epbulk_out_buffer_bytes_available;
 
     void epbulk_in_callback();
     void epbulk_out_callback();
