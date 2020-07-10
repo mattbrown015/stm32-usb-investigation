@@ -75,18 +75,20 @@ bool get_endpoint_addresses(libusb_device *const device) {
     }
 
     endpoint_descriptor = config_descriptor->interface->altsetting->endpoint;
-    {
+    for (auto i = 0; i < interface_descriptor->bNumEndpoints; ++i) {
         const auto bEndpointAddress = endpoint_descriptor->bEndpointAddress;
         const auto bmAttributes = endpoint_descriptor->bmAttributes;
         printf("bEndpointAddress 0x%" PRIx8 " bmAttributes 0x%" PRIx8 "\n", bEndpointAddress, bmAttributes);
 
         const bool is_in = (bEndpointAddress & LIBUSB_ENDPOINT_IN) == LIBUSB_ENDPOINT_IN;
         const bool is_bulk = bmAttributes == LIBUSB_TRANSFER_TYPE_BULK;
-        if (!is_in || !is_bulk) {
-            puts("endpoint is not 'in' and/or not 'bulk'");
-            goto free_and_exit;
+        if (is_in && is_bulk) {
+            epbulk_in = bEndpointAddress;
         }
-        epbulk_in = bEndpointAddress;
+    }
+    if (epbulk_in == invalid_ep_address) {
+        puts("failed to find bulk in endpoint");
+        goto free_and_exit;
     }
 
     success = true;
