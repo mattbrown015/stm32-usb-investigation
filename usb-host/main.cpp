@@ -1,8 +1,10 @@
 #include <libusb-1.0/libusb.h>
 
+#include <array>
 #include <cassert>
 #include <cinttypes>
 #include <cstdio>
+#include <numeric>
 
 namespace
 {
@@ -269,6 +271,28 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
     }
 }
 
+bool bulk_transfer_out(libusb_device_handle *const device_handle) {
+    assert(epbulk_out != invalid_ep_address);
+
+    std::array<unsigned char, 64> data;
+    std::iota(std::begin(data), std::end(data), 2);
+    int transferred = 0;
+    const auto error = libusb_bulk_transfer(
+            device_handle,
+            epbulk_out,
+            data.data(),
+            data.size(),
+            &transferred,
+            1
+        );
+    if (error < 0) {
+        print_libusb_error(static_cast<libusb_error>(error), "libusb_bulk_transfer");
+        return false;
+    } else {
+        return true;
+    }
+}
+
 void do_somthing_with_device(libusb_device_handle *const device_handle) {
     assert(device_handle);
 
@@ -281,6 +305,7 @@ void do_somthing_with_device(libusb_device_handle *const device_handle) {
     if (!claim_interface(device_handle)) return;
 
     if (!bulk_transfer_in(device_handle)) return;
+    if (!bulk_transfer_out(device_handle)) return;
 
     if (!release_interface(device_handle)) return;
 }
