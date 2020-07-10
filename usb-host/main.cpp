@@ -160,6 +160,29 @@ bool control_transfer_in(libusb_device_handle *const device_handle) {
     }
 }
 
+bool bulk_transfer_in(libusb_device_handle *const device_handle) {
+    unsigned char data[64] = { 0 };
+    int transferred = 0;
+    const auto error = libusb_bulk_transfer(
+            device_handle,
+            LIBUSB_ENDPOINT_IN | 1, // endpoint - I can see from debugging the device that the endpoint number is 1, although I suspect I should find it programmatically
+            &data[0],
+            sizeof(data),
+            &transferred,
+            1
+        );
+    if (error < 0) {
+        print_libusb_error(static_cast<libusb_error>(error), "libusb_bulk_transfer");
+        return false;
+    } else {
+        for (auto i = 0u; i < sizeof(data); ++i) {
+            printf("0x%02" PRIx8 " ", data[i]);
+        }
+        putchar('\n');
+        return true;
+    }
+}
+
 void do_somthing_with_device(libusb_device_handle *const device_handle) {
     assert(device_handle);
 
@@ -170,6 +193,9 @@ void do_somthing_with_device(libusb_device_handle *const device_handle) {
     if (!control_transfer_in(device_handle)) return;
 
     if (!claim_interface(device_handle)) return;
+
+    if (!bulk_transfer_in(device_handle)) return;
+
     if (!release_interface(device_handle)) return;
 }
 
