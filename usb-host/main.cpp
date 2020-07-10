@@ -48,7 +48,7 @@ bool get_endpoint_addresses(libusb_device *const device) {
 
     auto success = false;
 
-    libusb_config_descriptor *config_descriptor;
+    libusb_config_descriptor *config_descriptor = nullptr;
     const auto error = libusb_get_config_descriptor(device, 0, &config_descriptor);
     if (error < 0) {
         print_libusb_error(static_cast<libusb_error>(error), "libusb_get_device_descriptor");
