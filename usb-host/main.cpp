@@ -49,6 +49,9 @@ bool get_endpoint_addresses(libusb_device *const device) {
     auto success = false;
 
     libusb_config_descriptor *config_descriptor = nullptr;
+    const libusb_interface_descriptor *interface_descriptor = nullptr;
+    const libusb_endpoint_descriptor *endpoint_descriptor = nullptr;
+
     const auto error = libusb_get_config_descriptor(device, 0, &config_descriptor);
     if (error < 0) {
         print_libusb_error(static_cast<libusb_error>(error), "libusb_get_device_descriptor");
@@ -64,14 +67,17 @@ bool get_endpoint_addresses(libusb_device *const device) {
         goto free_and_exit;
     }
 
-    if (config_descriptor->interface->altsetting->bNumEndpoints != 2) {
-        printf("unexpected number of endpoints %" PRIi8 "\n", config_descriptor->interface->altsetting->bNumEndpoints);
+    interface_descriptor = config_descriptor->interface->altsetting;
+
+    if (interface_descriptor->bNumEndpoints != 2) {
+        printf("unexpected number of endpoints %" PRIi8 "\n", interface_descriptor->bNumEndpoints);
         goto free_and_exit;
     }
 
+    endpoint_descriptor = config_descriptor->interface->altsetting->endpoint;
     {
-        const auto bEndpointAddress = config_descriptor->interface->altsetting->endpoint->bEndpointAddress;
-        const auto bmAttributes = config_descriptor->interface->altsetting->endpoint->bmAttributes;
+        const auto bEndpointAddress = endpoint_descriptor->bEndpointAddress;
+        const auto bmAttributes = endpoint_descriptor->bmAttributes;
         printf("bEndpointAddress 0x%" PRIx8 " bmAttributes 0x%" PRIx8 "\n", bEndpointAddress, bmAttributes);
 
         const bool is_in = (bEndpointAddress & LIBUSB_ENDPOINT_IN) == LIBUSB_ENDPOINT_IN;
