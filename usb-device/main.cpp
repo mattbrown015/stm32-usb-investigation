@@ -15,7 +15,7 @@ rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "wait_until_configur
 EvkUSBDevice::EvkUSBDevice evk_usb_device;
 
 void wait_until_configured() {
-    evk_usb_device.configured.acquire();
+    evk_usb_device.wait_configured();
 
     puts("EvkUSBDevice configured");
 }

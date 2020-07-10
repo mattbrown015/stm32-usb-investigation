@@ -3,6 +3,7 @@
 #include <drivers/internal/EndpointResolver.h>
 #include <drivers/internal/USBDescriptor.h>
 #include <hal/usb/usb_phy_api.h>
+#include <rtos/EventFlags.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -13,6 +14,15 @@ uint8_t received_request_data[16] = { 0 };
 
 namespace EvkUSBDevice
 {
+
+namespace
+{
+
+rtos::EventFlags event_flags("EvkUSBDevice");
+
+const uint32_t configured_flag = 1 << 0;
+
+}
 
 EvkUSBDevice::EvkUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) {
     EndpointResolver resolver(endpoint_table());
@@ -26,6 +36,11 @@ EvkUSBDevice::EvkUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) 
 
 EvkUSBDevice::~EvkUSBDevice() {
     deinit();
+}
+
+void EvkUSBDevice::wait_configured() {
+    MBED_UNUSED const auto result = event_flags.wait_all(configured_flag);
+    MBED_ASSERT(!(result & osFlagsError));
 }
 
 const uint8_t *EvkUSBDevice::configuration_desc(uint8_t index) {
@@ -75,7 +90,8 @@ void EvkUSBDevice::callback_state_change(DeviceState new_state) {
     assert_locked();
 
     if (new_state == DeviceState::Configured) {
-        configured.release();
+        MBED_UNUSED const auto result = event_flags.set(configured_flag);
+        MBED_ASSERT(!(result & osFlagsError));
     }
 }
 
