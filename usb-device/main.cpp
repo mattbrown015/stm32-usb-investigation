@@ -1,5 +1,6 @@
 #include "evk-usb-device.h"
 #include "show-running.h"
+#include "usb-device.h"
 
 #include <rtos/ThisThread.h>
 #include <rtos/Thread.h>
@@ -18,18 +19,29 @@ rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "wait_until_configur
 
 EvkUSBDevice::EvkUSBDevice evk_usb_device;
 
+void repeat_bulk_in_transfer() {
+    printf("perform %d bulk in transfers\n", usb_device::number_of_bulk_in_repeats);
+    std::array<unsigned char, 64> buffer;
+    std::iota(std::begin(buffer), std::end(buffer), 1);
+
+    for (auto i = 0; i < usb_device::number_of_bulk_in_repeats; ++i) {
+        const auto number_of_bytes_transferred = evk_usb_device.bulk_in_transfer(buffer.data(), buffer.size());
+        if (number_of_bytes_transferred != buffer.size()) {
+            printf("Unexpected number of bytes transferred %" PRIu32 "\n", number_of_bytes_transferred);
+        }
+    }
+
+    printf("completed %d bulk in transfers\n", usb_device::number_of_bulk_in_repeats);
+}
+
 void wait_until_configured() {
     evk_usb_device.wait_configured();
     puts("EvkUSBDevice configured");
 
-    puts("perform bulk in transfer");
-    std::array<unsigned char, 64> buffer;
-    std::iota(std::begin(buffer), std::end(buffer), 1);
-    const auto number_of_bytes_transferred = evk_usb_device.bulk_in_transfer(buffer.data(), buffer.size());
-    printf("number_of_bytes_transferred %" PRIi32 "\n", number_of_bytes_transferred);
+    repeat_bulk_in_transfer();
 
     puts("perform bulk out transfer");
-    buffer.fill(0);
+    std::array<unsigned char, 64> buffer{ 0 };
     const auto out_number_of_bytes_transferred = evk_usb_device.bulk_out_transfer(buffer.data(), buffer.size());
     printf("out_number_of_bytes_transferred %" PRIi32 "\n", out_number_of_bytes_transferred);
 
