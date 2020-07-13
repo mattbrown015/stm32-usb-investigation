@@ -1,3 +1,5 @@
+#include "../usb-device/usb-device.h"
+
 #include <libusb-1.0/libusb.h>
 
 #include <array>
@@ -263,12 +265,29 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
         print_libusb_error(static_cast<libusb_error>(error), "libusb_bulk_transfer");
         return false;
     } else {
-        for (auto i = 0u; i < sizeof(data); ++i) {
-            printf("0x%02" PRIx8 " ", data[i]);
+        std::array<unsigned char, 64> expected;
+        std::iota(std::begin(expected), std::end(expected), 1);
+        if (!std::equal(std::begin(expected), std::end(expected), data)) {
+            for (auto i = 0u; i < sizeof(data); ++i) {
+                printf("0x%02" PRIx8 " ", data[i]);
+            }
+            putchar('\n');
         }
-        putchar('\n');
+
         return true;
     }
+}
+
+bool repeat_bulk_in_transfer(libusb_device_handle *const device_handle) {
+    printf("perform %d bulk in transfers\n", usb_device::number_of_bulk_in_repeats);
+
+    for (auto i = 0; i < usb_device::number_of_bulk_in_repeats; ++i) {
+        if (!bulk_transfer_in(device_handle)) return false;
+    }
+
+    printf("completed %d bulk in transfers\n", usb_device::number_of_bulk_in_repeats);
+
+    return true;
 }
 
 bool bulk_transfer_out(libusb_device_handle *const device_handle) {
@@ -304,7 +323,7 @@ void do_somthing_with_device(libusb_device_handle *const device_handle) {
 
     if (!claim_interface(device_handle)) return;
 
-    if (!bulk_transfer_in(device_handle)) return;
+    if (!repeat_bulk_in_transfer(device_handle)) return;
     if (!bulk_transfer_out(device_handle)) return;
 
     if (!release_interface(device_handle)) return;
