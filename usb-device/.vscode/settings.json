@@ -1,4 +1,10 @@
 {
+    "cSpell.words": [
+        "mbed",
+    ],
+    "cSpell.ignoreWords": [
+        "epbulk"
+    ],
     "search.exclude": {
         "BUILD": true,
         "mbed-os/components": true,
