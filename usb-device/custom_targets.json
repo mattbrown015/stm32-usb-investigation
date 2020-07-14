@@ -5,6 +5,9 @@
         "extra_labels_add": [
             "STM32F7",
             "STM32F723xE"
+        ],
+        "macros_add": [
+            "STM32F723xx"
         ]
     }
 }
