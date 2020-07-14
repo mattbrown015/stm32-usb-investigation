@@ -8,6 +8,9 @@
         ],
         "macros_add": [
             "STM32F723xx"
+        ],
+        "device_has_add": [
+            "MPU"
         ]
     }
 }
