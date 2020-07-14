@@ -19,7 +19,8 @@
             }
         },
         "macros_add": [
-            "STM32F723xx"
+            "STM32F723xx",
+            "HSE_VALUE=25000000"
         ],
         "device_has_add": [
             "USBDEVICE",
