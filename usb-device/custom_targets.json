@@ -6,6 +6,12 @@
             "STM32F7",
             "STM32F723xE"
         ],
+        "config": {
+            "clock_source": {
+                "value": "USE_PLL_HSE_XTAL|USE_PLL_HSI",
+                "macro_name": "CLOCK_SOURCE"
+            }
+        },
         "macros_add": [
             "STM32F723xx"
         ],
