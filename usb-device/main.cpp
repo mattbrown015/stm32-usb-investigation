@@ -61,5 +61,5 @@ int main() {
     MBED_UNUSED const osStatus status = thread.start(wait_until_configured);
     MBED_ASSERT(status == osOK);
 
-    rtos::ThisThread::sleep_for(osWaitForever);
+    rtos::ThisThread::sleep_for(rtos::Kernel::wait_for_u32_forever);
 }

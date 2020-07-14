@@ -17,10 +17,12 @@ MBED_ALIGN(8) unsigned char stack[stack_size];
 rtos::Thread thread(osPriorityLow, sizeof(stack), stack, "show_running");
 
 void show_running() {
+    using namespace std::chrono_literals;
+
     while (1) {
         green_led = !green_led;
 
-        rtos::ThisThread::sleep_for(1000);
+        rtos::ThisThread::sleep_for(1s);
     }
 }
 
