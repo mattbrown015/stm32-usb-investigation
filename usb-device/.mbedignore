@@ -16,5 +16,4 @@ mbed-os/features/netsocket/*
 mbed-os/features/nfc/*
 mbed-os/features/storage/filesystem/*
 mbed-os/features/storage/kvstore/*
-mbed-os/features/storage/nvstore/*
 mbed-os/features/storage/system_storage/*
