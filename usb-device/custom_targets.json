@@ -1,5 +1,6 @@
 {
     "DISCO_F723IE": {
-        "inherits": ["FAMILY_STM32"]
+        "inherits": ["FAMILY_STM32"],
+        "core": "Cortex-M7F"
     }
 }
