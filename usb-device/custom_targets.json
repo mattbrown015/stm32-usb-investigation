@@ -1,0 +1,5 @@
+{
+    "DISCO_F723IE": {
+        "inherits": ["FAMILY_STM32"]
+    }
+}
