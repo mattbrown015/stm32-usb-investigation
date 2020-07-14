@@ -10,6 +10,9 @@
             "clock_source": {
                 "value": "USE_PLL_HSE_XTAL|USE_PLL_HSI",
                 "macro_name": "CLOCK_SOURCE"
+            },
+            "lpticker_lptim": {
+                "value": 1
             }
         },
         "macros_add": [
@@ -17,6 +20,9 @@
         ],
         "device_has_add": [
             "MPU"
-        ]
+        ],
+        "overrides": {
+            "lpticker_delay_ticks": 0
+        }
     }
 }
