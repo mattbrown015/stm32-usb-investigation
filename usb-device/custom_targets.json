@@ -11,6 +11,9 @@
                 "value": "USE_PLL_HSE_XTAL|USE_PLL_HSI",
                 "macro_name": "CLOCK_SOURCE"
             },
+            "usb_speed": {
+                "value": "USE_USB_OTG_FS"
+            },
             "lpticker_lptim": {
                 "value": 1
             }
@@ -19,6 +22,7 @@
             "STM32F723xx"
         ],
         "device_has_add": [
+            "USBDEVICE",
             "MPU"
         ],
         "overrides": {
