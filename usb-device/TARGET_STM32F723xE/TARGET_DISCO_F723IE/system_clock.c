@@ -82,7 +82,7 @@ void SetSysClock(void)
     }
 
     // Output clock on MCO2 pin(PC9) for debugging purpose
-    // Can be visualized on uSD card CN3 connector pin 8
+    // Can be visualized on Quad SPI Flash Memory chip, U5 pin 5
     //HAL_RCC_MCOConfig(RCC_MCO2, RCC_MCO2SOURCE_SYSCLK, RCC_MCODIV_4); // 216 MHz / 4 = 54 MHz
 }
 
