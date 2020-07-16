@@ -12,7 +12,7 @@
                 "macro_name": "CLOCK_SOURCE"
             },
             "usb_speed": {
-                "value": "USE_USB_OTG_FS"
+                "value": "USE_USB_OTG_HS"
             },
             "lpticker_lptim": {
                 "value": 1
