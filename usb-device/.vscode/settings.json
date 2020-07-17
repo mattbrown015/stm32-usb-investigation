@@ -41,6 +41,7 @@
         "mbed-os/targets/TARGET_STM/TARGET_STM32F7/TARGET_STM32F756xG": true,
         "mbed-os/targets/TARGET_STM/TARGET_STM32F7/TARGET_STM32F769xI": true,
         "mbed-os/targets/TARGET_STM/TARGET_STM32G0": true,
+        "mbed-os/targets/TARGET_STM/TARGET_STM32G4": true,
         "mbed-os/targets/TARGET_STM/TARGET_STM32H7": true,
         "mbed-os/targets/TARGET_STM/TARGET_STM32L0": true,
         "mbed-os/targets/TARGET_STM/TARGET_STM32L1": true,
