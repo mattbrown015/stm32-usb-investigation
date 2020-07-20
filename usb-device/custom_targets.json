@@ -23,7 +23,6 @@
             "HSE_VALUE=25000000"
         ],
         "device_has_add": [
-            "USBDEVICE",
             "MPU"
         ],
         "overrides": {

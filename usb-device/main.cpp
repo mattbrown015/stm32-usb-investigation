@@ -1,3 +1,17 @@
+#if !defined(DEVICE_USBDEVICE)
+
+#include <rtos/ThisThread.h>
+
+#include <cstdio>
+
+int main() {
+    puts("usb-device-use-hal");
+
+    rtos::ThisThread::sleep_for(rtos::Kernel::wait_for_u32_forever);
+}
+
+#else
+
 #include "evk-usb-device.h"
 #include "show-running.h"
 #include "usb-device.h"
@@ -63,3 +77,5 @@ int main() {
 
     rtos::ThisThread::sleep_for(rtos::Kernel::wait_for_u32_forever);
 }
+
+#endif

@@ -1,6 +1,8 @@
 #ifndef EVKUSBDEVICE_H
 #define EVKUSBDEVICE_H
 
+#if defined(DEVICE_USBDEVICE)
+
 #include <drivers/internal/USBDevice.h>
 
 namespace EvkUSBDevice
@@ -44,5 +46,7 @@ private:
 };
 
 }
+
+#endif
 
 #endif

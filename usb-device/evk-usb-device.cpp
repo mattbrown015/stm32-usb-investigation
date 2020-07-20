@@ -1,5 +1,7 @@
 #include "evk-usb-device.h"
 
+#if defined(DEVICE_USBDEVICE)
+
 #include <drivers/internal/EndpointResolver.h>
 #include <drivers/internal/USBDescriptor.h>
 #include <hal/usb/usb_phy_api.h>
@@ -210,3 +212,5 @@ void EvkUSBDevice::epbulk_out_callback() {
 }
 
 }
+
+#endif
