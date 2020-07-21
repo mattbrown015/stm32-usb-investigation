@@ -40,6 +40,15 @@ PCD_HandleTypeDef hpcd = {
 };
 
 void init() {
+    // 'STM32Cube_FW_F7_V1.16.0/Projects/STM32F723E-Discovery/Applications/USB_Device/HID_Standalone/Src/usbd_conf.c'
+    // uses 'HAL_PCD_MspInit' to do some of the configuration. 'HAL_PCD_MspInit' is called from 'HAL_PCD_Init' and it is
+    // intended that the application will use it for low level configuration such as clocks and GPIOs.
+    // I'm not sure what value it adds and 'USBPhyHw::init' doesn't use.
+    // I'm just going to do all the initialisation here, e.g. the clocks are enabled below.
+    // 'HAL_PCD_MspInit' in 'usbd_conf.c' initialises the GPIOs for USB FS but not for USB HS.
+    // It appears the USB HS GPIOs don't need to be configured for their alternate functions.
+    // I don't understand this and perhaps it will need revisiting.
+
     __HAL_RCC_OTGPHYC_CLK_ENABLE();
     __HAL_RCC_USB_OTG_HS_CLK_ENABLE();
     __HAL_RCC_USB_OTG_HS_ULPI_CLK_ENABLE();
@@ -67,7 +76,7 @@ void init() {
     // 'usbd_conf.c' seems to leave 12 words unallocated when I expected 11. Either there's something I don't understand or there's another word up for grabs.
     // Stick with 'usbd_conf.c' until the example is working.
     HAL_PCDEx_SetRxFiFo(&hpcd, 0x200);  // Rx FIFO size must be set first
-    HAL_PCDEx_SetTxFiFo(&hpcd, 0, 0x80);  // Tx FIFOs for out endpoints must be set in order
+    HAL_PCDEx_SetTxFiFo(&hpcd, 0, 0x80);  // Tx FIFOs for IN endpoints must be set in order
     HAL_PCDEx_SetTxFiFo(&hpcd, 1, 0x174);
 }
 
