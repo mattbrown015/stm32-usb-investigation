@@ -46,6 +46,29 @@ void init() {
 
     MBED_UNUSED const HAL_StatusTypeDef ret = HAL_PCD_Init(&hpcd);
     MBED_ASSERT(ret == HAL_OK);
+
+    // The STM32F72x has 4 Kbytes of dedicated RAM for the USB data FIFOs in HS mode.
+    // FIFO size is set as 32-bit words i.e. 0x200 words is 2048 bytes or half the dedicated RAM.
+    // From 32.11.3 FIFO RAM allocation/Device Mode of the reference manual:
+    //     10 locations must be reserved in the receive FIFO to receive SETUP packets on control endpoint.
+    //     One location is to be allocated for Global OUT NAK.
+    // By location I think it means 'word'.
+    // The reference manual doesn't say where these reserved locations are but it appears from
+    // 'USBPhyHw::init' and 'STM32Cube_FW_F7_V1.16.0/Projects/STM32F723E-Discovery/Applications/USB_Device/HID_Standalone/Src/usbd_conf.c'
+    // that not all the words should be allocated here.
+    // 'USBPhyHw::init' is a poor example because it thinks there is only '1.25 kbytes' of RAM available.
+    // I've copied these numbers from 'usbd_conf.c'.
+    // I think the rational is something like:
+    //     Packets of varying sizes can be received so allocate an arbitrarily large RX FIFO i.e. half the available space.
+    //     If the application will result in more TX packets then, I guess, this could be reduced.
+    //     Control packets on EP0 have a max size of 64 bytes so I think 0x80 means there's room for 8 TX control packets in the FIFO.
+    //     TX packets on EP1 could be 512 bytes so 0x174 words (1488 bytes) means there's room for nearly 3 packets in the FIFO.
+    //     If the application will be sending  many bulk 512 byte packets I guess the TX FIFO size could be increased to make room for 3, or 4, packets.
+    // 'usbd_conf.c' seems to leave 12 words unallocated when I expected 11. Either there's something I don't understand or there's another word up for grabs.
+    // Stick with 'usbd_conf.c' until the example is working.
+    HAL_PCDEx_SetRxFiFo(&hpcd, 0x200);  // Rx FIFO size must be set first
+    HAL_PCDEx_SetTxFiFo(&hpcd, 0, 0x80);  // Tx FIFOs for out endpoints must be set in order
+    HAL_PCDEx_SetTxFiFo(&hpcd, 1, 0x174);
 }
 
 }
