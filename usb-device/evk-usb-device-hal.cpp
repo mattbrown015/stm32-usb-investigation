@@ -78,6 +78,15 @@ void init() {
     HAL_PCDEx_SetRxFiFo(&hpcd, 0x200);  // Rx FIFO size must be set first
     HAL_PCDEx_SetTxFiFo(&hpcd, 0, 0x80);  // Tx FIFOs for IN endpoints must be set in order
     HAL_PCDEx_SetTxFiFo(&hpcd, 1, 0x174);
+
+    // Set USB HS interrupt to the lowest priority
+    HAL_NVIC_SetPriority(OTG_HS_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(OTG_HS_IRQn);
 }
 
+}
+
+// Replace /weak/ definition provided by 'startup_stm32f723xx.s' so needs to be in the global namespace.
+extern "C" void OTG_HS_IRQHandler(void)
+{
 }
