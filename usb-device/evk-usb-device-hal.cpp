@@ -92,3 +92,14 @@ void init() {
 extern "C" void OTG_HS_IRQHandler() {
     HAL_PCD_IRQHandler(&evk_usb_device_hal::hpcd);
 }
+
+// This is the first callback called after calling 'HAL_PCD_Start' and connecting the device.
+// This is a significantly simplified version of 'HAL_PCD_ResetCallback' from 'usbd_conf.c'.
+// A USB device must always have EP0 open for In and OUT transactions.
+void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
+    const uint8_t ep0_out_ep_addr = 0x00;
+    HAL_PCD_EP_Open(hpcd, ep0_out_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
+
+    const uint8_t ep0_in_ep_addr = 0x80;
+    HAL_PCD_EP_Open(hpcd, ep0_in_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
+}
