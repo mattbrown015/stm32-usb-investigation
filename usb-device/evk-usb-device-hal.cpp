@@ -89,7 +89,6 @@ void init() {
 }
 
 // Replace /weak/ definition provided by 'startup_stm32f723xx.s' so needs to be in the global namespace.
-extern "C" void OTG_HS_IRQHandler(void)
-{
+extern "C" void OTG_HS_IRQHandler() {
     HAL_PCD_IRQHandler(&evk_usb_device_hal::hpcd);
 }
