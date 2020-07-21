@@ -82,6 +82,8 @@ void init() {
     // Set USB HS interrupt to the lowest priority
     HAL_NVIC_SetPriority(OTG_HS_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(OTG_HS_IRQn);
+
+    HAL_PCD_Start(&hpcd);
 }
 
 }
@@ -89,4 +91,5 @@ void init() {
 // Replace /weak/ definition provided by 'startup_stm32f723xx.s' so needs to be in the global namespace.
 extern "C" void OTG_HS_IRQHandler(void)
 {
+    HAL_PCD_IRQHandler(&evk_usb_device_hal::hpcd);
 }
