@@ -6,6 +6,29 @@
 namespace evk_usb_device_hal
 {
 
+const size_t device_descriptor_length = 18;
+uint8_t device_descriptor[device_descriptor_length] = {
+    // device descriptor, USB spec 9.6.1
+    device_descriptor_length,  // bLength
+    1,                      // bDescriptorType
+    0x0200 & 0xff,          // bcdUSB
+    (0x0200 & 0xff00) >> 8,
+    0x00,                   // bDeviceClass
+    0x00,                   // bDeviceSubClass
+    0x00,                   // bDeviceprotocol
+    USB_OTG_MAX_EP0_SIZE,   // bMaxPacketSize0
+    0x1f00 & 0xff,          // idVendor
+    (0x1f00 & 0xff00) >> 8,
+    0x2012 & 0xff,          // idProduct
+    (0x2012 & 0xff00) >> 8,
+    0x0001 & 0xff,          // bcdDevice
+    (0x0001 & 0xff00) >> 8,
+    0,                      // iManufacturer
+    0,                      // iProduct
+    0,                      // iSerialNumber
+    0                       // bNumConfigurations
+};
+
 PCD_HandleTypeDef hpcd = {
     .Instance = USB_OTG_HS,
     .Init = {
@@ -102,4 +125,45 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
 
     const uint8_t ep0_in_ep_addr = 0x80;
     HAL_PCD_EP_Open(hpcd, ep0_in_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
+}
+
+// 'HAL_PCD_IRQHandler' decodes setup packets, puts the payload in 'hpcd->Setup'
+// and calls 'HAL_PCD_SetupStageCallback'.
+// The packet is described in the USB Spec 9.3 USB Device Requests.
+void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
+{
+    // From Table 9-2. Format of Setup Data...
+    const uint8_t recipient_device = 0x00;
+    const uint8_t recipient_mask = 0x1f;
+
+    const uint8_t type_standard = 0x00;
+    const uint8_t type_mask = 0x60;
+
+    const uint8_t direction_device_to_host = 0x80;
+    const uint8_t direction_mask = 0x80;
+
+    // From Table 9-4. Standard Request Codes...
+    const uint8_t request_get_descriptor = 6;
+
+    // From Table 9-5. Descriptor Types...
+    const uint8_t descriptor_device = 1;
+    const uint8_t descriptor_configuration = 2;
+
+    const uint8_t bmRequestType = hpcd->Setup[0] & 0xff;
+    const uint8_t recipient = bmRequestType & recipient_mask;
+    const uint8_t type = bmRequestType & type_mask;
+    const uint8_t direction = bmRequestType & direction_mask;
+
+    const uint8_t bRequest = (hpcd->Setup[0] & 0xff00) >> 8;
+    const uint16_t wValue = (hpcd->Setup[0] & 0xffff0000) >> 16;
+    const uint8_t descriptor_type = (wValue & 0xff00) >> 8;
+    // const uint8_t descriptor_index = wValue & 0xff;
+
+    if (recipient == recipient_device && type == type_standard && direction == direction_device_to_host) {
+        if (bRequest == request_get_descriptor) {
+            if (descriptor_type == descriptor_device) {
+                HAL_PCD_EP_Transmit(&evk_usb_device_hal::hpcd, 0, &evk_usb_device_hal::device_descriptor[0], evk_usb_device_hal::device_descriptor_length);
+            }
+        }
+    }
 }
