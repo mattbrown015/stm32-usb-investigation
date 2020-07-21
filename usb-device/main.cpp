@@ -1,11 +1,15 @@
 #if !defined(DEVICE_USBDEVICE)
 
+#include "evk-usb-device-hal.h"
+
 #include <rtos/ThisThread.h>
 
 #include <cstdio>
 
 int main() {
     puts("usb-device-use-hal");
+
+    evk_usb_device_hal::init();
 
     rtos::ThisThread::sleep_for(rtos::Kernel::wait_for_u32_forever);
 }
