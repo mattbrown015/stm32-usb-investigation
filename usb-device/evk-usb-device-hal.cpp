@@ -3,6 +3,8 @@
 #include <platform/mbed_assert.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 
+#include <type_traits>
+
 namespace evk_usb_device_hal
 {
 
@@ -10,21 +12,53 @@ namespace
 {
 
 // From Table 9-2. Format of Setup Data...
-const uint8_t recipient_device = 0x00;
-const uint8_t recipient_mask = 0x1f;
+enum class recipient: uint8_t {
+    device = 0x00,
+    interface = 0x01,
+    endpoint = 0x02,
+    other = 0x03,
+    mask = 0x1f
+};
 
-const uint8_t type_standard = 0x00;
-const uint8_t type_mask = 0x60;
+enum class type: uint8_t {
+    standard = 0x00,
+    class_ = 0x20,
+    vendor = 0x40,
+    mask = 0x60
+};
 
-const uint8_t direction_device_to_host = 0x80;
-const uint8_t direction_mask = 0x80;
+enum class direction: uint8_t {
+    host_to_device = 0x00,
+    device_to_host = 0x80,
+    mask = 0x80
+};
 
 // From Table 9-4. Standard Request Codes...
-const uint8_t request_get_descriptor = 6;
+enum class request: uint8_t {
+    get_status = 0,
+    clear_feature = 1,
+    set_feature = 3,
+    set_address = 5,
+    get_descriptor = 6,
+    set_descriptor = 7,
+    get_configuration = 8,
+    set_configuration = 9,
+    get_interface = 10,
+    set_interface = 11,
+    synch_frame = 12
+};
 
 // From Table 9-5. Descriptor Types...
-const uint8_t descriptor_device = 1;
-const uint8_t descriptor_configuration = 2;
+enum class descriptor: uint8_t {
+    device = 1,
+    configuration = 2,
+    string = 3,
+    interface = 4,
+    endpoint = 5,
+    device_qualifier = 6,
+    other_speed_configuration = 7,
+    interface_power = 8
+};
 
 const size_t device_descriptor_length = 18;
 uint8_t device_descriptor[device_descriptor_length] = {
@@ -82,20 +116,26 @@ PCD_HandleTypeDef hpcd = {
     .pData = nullptr,
 };
 
+// https://stackoverflow.com/a/33083231
+template <typename E>
+constexpr auto to_underlying(E e) noexcept {
+    return static_cast<std::underlying_type_t<E>>(e);
+}
+
 void setup_stage_callback(PCD_HandleTypeDef *const hpcd) {
     const uint8_t bmRequestType = hpcd->Setup[0] & 0xff;
-    const uint8_t recipient = bmRequestType & recipient_mask;
-    const uint8_t type = bmRequestType & type_mask;
-    const uint8_t direction = bmRequestType & direction_mask;
+    const uint8_t recipient = bmRequestType & to_underlying(recipient::mask);
+    const uint8_t type = bmRequestType & to_underlying(type::mask);
+    const uint8_t direction = bmRequestType & to_underlying(direction::mask);
 
     const uint8_t bRequest = (hpcd->Setup[0] & 0xff00) >> 8;
     const uint16_t wValue = (hpcd->Setup[0] & 0xffff0000) >> 16;
     const uint8_t descriptor_type = (wValue & 0xff00) >> 8;
     // const uint8_t descriptor_index = wValue & 0xff;
 
-    if (recipient == recipient_device && type == type_standard && direction == direction_device_to_host) {
-        if (bRequest == request_get_descriptor) {
-            if (descriptor_type == descriptor_device) {
+    if (recipient == to_underlying(recipient::device) && type == to_underlying(type::standard) && direction == to_underlying(direction::device_to_host)) {
+        if (bRequest == to_underlying(request::get_descriptor)) {
+            if (descriptor_type == to_underlying(descriptor::device)) {
                 HAL_PCD_EP_Transmit(&evk_usb_device_hal::hpcd, 0, &evk_usb_device_hal::device_descriptor[0], evk_usb_device_hal::device_descriptor_length);
             }
         }
