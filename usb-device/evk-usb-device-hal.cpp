@@ -9,6 +9,9 @@ namespace evk_usb_device_hal
 namespace
 {
 
+constexpr uint8_t lsb(const uint16_t word);
+constexpr uint8_t msb(const uint16_t word);
+
 // From Table 9-2. Format of Setup Data...
 enum class recipient_t: uint8_t {
     device = 0x00,
@@ -79,18 +82,18 @@ uint8_t device_descriptor[device_descriptor_length] = {
     // device descriptor, USB spec 9.6.1
     device_descriptor_length,  // bLength
     static_cast<uint8_t>(descriptor_t::device),  // bDescriptorType
-    0x0200 & 0xff,          // bcdUSB
-    (0x0200 & 0xff00) >> 8,
+    lsb(0x0200),            // bcdUSB
+    msb(0x0200),
     0x00,                   // bDeviceClass
     0x00,                   // bDeviceSubClass
     0x00,                   // bDeviceprotocol
     USB_OTG_MAX_EP0_SIZE,   // bMaxPacketSize0
-    0x1f00 & 0xff,          // idVendor
-    (0x1f00 & 0xff00) >> 8,
-    0x2012 & 0xff,          // idProduct
-    (0x2012 & 0xff00) >> 8,
-    0x0001 & 0xff,          // bcdDevice
-    (0x0001 & 0xff00) >> 8,
+    lsb(0x1f00),            // idVendor
+    msb(0x1f00),
+    lsb(0x2012),            // idProduct
+    msb(0x2012),
+    lsb(0x0001),            // bcdDevice
+    msb(0x0001),
     0,                      // iManufacturer
     0,                      // iProduct
     0,                      // iSerialNumber
@@ -129,6 +132,15 @@ PCD_HandleTypeDef hpcd = {
     .lpm_active = DISABLE,
     .pData = nullptr,
 };
+
+constexpr uint8_t lsb(const uint16_t word) {
+    // Not sure that the explicit mask is necessary.
+    return word & 0xff;
+}
+
+constexpr uint8_t msb(const uint16_t word) {
+    return (word & 0xff00) >> 8;
+}
 
 setup_data decode_setup_packet(const uint32_t setup[]) {
     const uint8_t bmRequestType = setup[0] & 0xff;
