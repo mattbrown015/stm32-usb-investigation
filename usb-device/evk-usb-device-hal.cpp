@@ -78,7 +78,7 @@ const size_t device_descriptor_length = 18;
 uint8_t device_descriptor[device_descriptor_length] = {
     // device descriptor, USB spec 9.6.1
     device_descriptor_length,  // bLength
-    1,                      // bDescriptorType
+    static_cast<uint8_t>(descriptor_t::device),  // bDescriptorType
     0x0200 & 0xff,          // bcdUSB
     (0x0200 & 0xff00) >> 8,
     0x00,                   // bDeviceClass
