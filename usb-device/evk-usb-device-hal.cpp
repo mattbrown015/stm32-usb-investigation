@@ -172,10 +172,20 @@ void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &se
         case request_t::get_descriptor:
             get_descriptor(hpcd, setup_data);
             break;
+        case request_t::set_address: {
+            MBED_ASSERT(setup_data.wIndex == 0);
+            MBED_ASSERT(setup_data.wLength == 0);
+
+            const uint8_t address = setup_data.wValue;
+            MBED_ASSERT(address > 0 && address < 128);
+
+            HAL_PCD_SetAddress(hpcd, address);
+            HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+            break;
+        }
         case request_t::get_status:
         case request_t::clear_feature:
         case request_t::set_feature:
-        case request_t::set_address:
         case request_t::set_descriptor:
         case request_t::get_configuration:
         case request_t::set_configuration:
