@@ -155,8 +155,8 @@ setup_data decode_setup_packet(const uint32_t setup[]) {
         },
         .bRequest = static_cast<request_t>((setup[0] & 0xff00) >> 8),
         .wValue = static_cast<uint16_t>((setup[0] & 0xffff0000) >> 16),
-        .wIndex = static_cast<uint16_t>(setup[2] & 0x0000ffff),
-        .wLength = static_cast<uint16_t>((setup[2] & 0xffff0000) >> 16)
+        .wIndex = static_cast<uint16_t>(setup[1] & 0x0000ffff),
+        .wLength = static_cast<uint16_t>((setup[1] & 0xffff0000) >> 16)
     };
     return setup_data;
 }
