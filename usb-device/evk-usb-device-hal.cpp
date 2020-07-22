@@ -77,13 +77,16 @@ struct setup_data {
     uint16_t wLength;
 };
 
+// From 9.2.6.6 Speed Dependent Descriptors...
+const uint16_t usb_version_2_0 = 0x0200;
+
 const size_t device_descriptor_length = 18;
 uint8_t device_descriptor[device_descriptor_length] = {
     // device descriptor, USB spec 9.6.1
     device_descriptor_length,  // bLength
     static_cast<uint8_t>(descriptor_t::device),  // bDescriptorType
-    lsb(0x0200),            // bcdUSB
-    msb(0x0200),
+    lsb(usb_version_2_0),    // bcdUSB
+    msb(usb_version_2_0),
     0x00,                   // bDeviceClass
     0x00,                   // bDeviceSubClass
     0x00,                   // bDeviceprotocol
