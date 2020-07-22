@@ -6,6 +6,9 @@
 namespace evk_usb_device_hal
 {
 
+namespace
+{
+
 const size_t device_descriptor_length = 18;
 uint8_t device_descriptor[device_descriptor_length] = {
     // device descriptor, USB spec 9.6.1
@@ -61,6 +64,45 @@ PCD_HandleTypeDef hpcd = {
     .lpm_active = DISABLE,
     .pData = nullptr,
 };
+
+void setup_stage_callback(PCD_HandleTypeDef *const hpcd) {
+    // From Table 9-2. Format of Setup Data...
+    const uint8_t recipient_device = 0x00;
+    const uint8_t recipient_mask = 0x1f;
+
+    const uint8_t type_standard = 0x00;
+    const uint8_t type_mask = 0x60;
+
+    const uint8_t direction_device_to_host = 0x80;
+    const uint8_t direction_mask = 0x80;
+
+    // From Table 9-4. Standard Request Codes...
+    const uint8_t request_get_descriptor = 6;
+
+    // From Table 9-5. Descriptor Types...
+    const uint8_t descriptor_device = 1;
+    const uint8_t descriptor_configuration = 2;
+
+    const uint8_t bmRequestType = hpcd->Setup[0] & 0xff;
+    const uint8_t recipient = bmRequestType & recipient_mask;
+    const uint8_t type = bmRequestType & type_mask;
+    const uint8_t direction = bmRequestType & direction_mask;
+
+    const uint8_t bRequest = (hpcd->Setup[0] & 0xff00) >> 8;
+    const uint16_t wValue = (hpcd->Setup[0] & 0xffff0000) >> 16;
+    const uint8_t descriptor_type = (wValue & 0xff00) >> 8;
+    // const uint8_t descriptor_index = wValue & 0xff;
+
+    if (recipient == recipient_device && type == type_standard && direction == direction_device_to_host) {
+        if (bRequest == request_get_descriptor) {
+            if (descriptor_type == descriptor_device) {
+                HAL_PCD_EP_Transmit(&evk_usb_device_hal::hpcd, 0, &evk_usb_device_hal::device_descriptor[0], evk_usb_device_hal::device_descriptor_length);
+            }
+        }
+    }
+}
+
+}
 
 void init() {
     // 'STM32Cube_FW_F7_V1.16.0/Projects/STM32F723E-Discovery/Applications/USB_Device/HID_Standalone/Src/usbd_conf.c'
@@ -132,38 +174,5 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
 // The packet is described in the USB Spec 9.3 USB Device Requests.
 void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
 {
-    // From Table 9-2. Format of Setup Data...
-    const uint8_t recipient_device = 0x00;
-    const uint8_t recipient_mask = 0x1f;
-
-    const uint8_t type_standard = 0x00;
-    const uint8_t type_mask = 0x60;
-
-    const uint8_t direction_device_to_host = 0x80;
-    const uint8_t direction_mask = 0x80;
-
-    // From Table 9-4. Standard Request Codes...
-    const uint8_t request_get_descriptor = 6;
-
-    // From Table 9-5. Descriptor Types...
-    const uint8_t descriptor_device = 1;
-    const uint8_t descriptor_configuration = 2;
-
-    const uint8_t bmRequestType = hpcd->Setup[0] & 0xff;
-    const uint8_t recipient = bmRequestType & recipient_mask;
-    const uint8_t type = bmRequestType & type_mask;
-    const uint8_t direction = bmRequestType & direction_mask;
-
-    const uint8_t bRequest = (hpcd->Setup[0] & 0xff00) >> 8;
-    const uint16_t wValue = (hpcd->Setup[0] & 0xffff0000) >> 16;
-    const uint8_t descriptor_type = (wValue & 0xff00) >> 8;
-    // const uint8_t descriptor_index = wValue & 0xff;
-
-    if (recipient == recipient_device && type == type_standard && direction == direction_device_to_host) {
-        if (bRequest == request_get_descriptor) {
-            if (descriptor_type == descriptor_device) {
-                HAL_PCD_EP_Transmit(&evk_usb_device_hal::hpcd, 0, &evk_usb_device_hal::device_descriptor[0], evk_usb_device_hal::device_descriptor_length);
-            }
-        }
-    }
+    evk_usb_device_hal::setup_stage_callback(hpcd);
 }
