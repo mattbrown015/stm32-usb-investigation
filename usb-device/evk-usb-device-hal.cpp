@@ -169,7 +169,15 @@ void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
     const auto descriptor_type = decode_descriptor_type(setup_data.wValue);
     switch(descriptor_type) {
         case descriptor_t::device:
-            HAL_PCD_EP_Transmit(hpcd, 0, &device_descriptor[0], device_descriptor_length);
+            if (setup_data.wLength >= device_descriptor_length) {
+                HAL_PCD_EP_Transmit(hpcd, 0, &device_descriptor[0], device_descriptor_length);
+            } else if (setup_data.wLength == 0) {
+                // This doesn't seem to happen but I think it is within the rules.
+                HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+            } else {
+                // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
+                MBED_ASSERT(false);
+            }
             break;
         case descriptor_t::configuration:
         case descriptor_t::string:
