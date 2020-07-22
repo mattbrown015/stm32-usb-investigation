@@ -12,7 +12,7 @@ namespace
 {
 
 // From Table 9-2. Format of Setup Data...
-enum class recipient: uint8_t {
+enum class recipient_t: uint8_t {
     device = 0x00,
     interface = 0x01,
     endpoint = 0x02,
@@ -20,21 +20,21 @@ enum class recipient: uint8_t {
     mask = 0x1f
 };
 
-enum class type: uint8_t {
+enum class type_t: uint8_t {
     standard = 0x00,
     class_ = 0x20,
     vendor = 0x40,
     mask = 0x60
 };
 
-enum class direction: uint8_t {
+enum class direction_t: uint8_t {
     host_to_device = 0x00,
     device_to_host = 0x80,
     mask = 0x80
 };
 
 // From Table 9-4. Standard Request Codes...
-enum class request: uint8_t {
+enum class request_t: uint8_t {
     get_status = 0,
     clear_feature = 1,
     set_feature = 3,
@@ -49,7 +49,7 @@ enum class request: uint8_t {
 };
 
 // From Table 9-5. Descriptor Types...
-enum class descriptor: uint8_t {
+enum class descriptor_t: uint8_t {
     device = 1,
     configuration = 2,
     string = 3,
@@ -58,6 +58,19 @@ enum class descriptor: uint8_t {
     device_qualifier = 6,
     other_speed_configuration = 7,
     interface_power = 8
+};
+
+// From Table 9-2. Format of Setup Data...
+struct setup_data {
+    struct request_type {
+        direction_t direction;
+        type_t type;
+        recipient_t recipient;
+    } bmRequestType;
+    request_t bRequest;
+    uint16_t wValue;
+    uint16_t wIndex;
+    uint16_t wLength;
 };
 
 const size_t device_descriptor_length = 18;
@@ -122,21 +135,35 @@ constexpr auto to_underlying(E e) noexcept {
     return static_cast<std::underlying_type_t<E>>(e);
 }
 
+setup_data decode_setup_packet(const uint32_t setup[]) {
+    const uint8_t bmRequestType = setup[0] & 0xff;
+    setup_data setup_data = {
+        .bmRequestType = {
+            .direction = static_cast<direction_t>(bmRequestType & to_underlying(direction_t::mask)),
+            .type = static_cast<type_t>(bmRequestType & to_underlying(type_t::mask)),
+            .recipient = static_cast<recipient_t>(bmRequestType & to_underlying(recipient_t::mask))
+        },
+        .bRequest = static_cast<request_t>((setup[0] & 0xff00) >> 8),
+        .wValue = static_cast<uint16_t>((setup[0] & 0xffff0000) >> 16),
+        .wIndex = static_cast<uint16_t>(setup[2] & 0x0000ffff),
+        .wLength = static_cast<uint16_t>((setup[2] & 0xffff0000) >> 16)
+    };
+    return setup_data;
+}
+
+descriptor_t decode_descriptor_type(const uint16_t wValue) {
+    return static_cast<descriptor_t>((wValue & 0xff00) >> 8);
+}
+
 void setup_stage_callback(PCD_HandleTypeDef *const hpcd) {
-    const uint8_t bmRequestType = hpcd->Setup[0] & 0xff;
-    const uint8_t recipient = bmRequestType & to_underlying(recipient::mask);
-    const uint8_t type = bmRequestType & to_underlying(type::mask);
-    const uint8_t direction = bmRequestType & to_underlying(direction::mask);
+    const auto setup_data = decode_setup_packet(hpcd->Setup);
+    const auto bmRequestType = setup_data.bmRequestType;
 
-    const uint8_t bRequest = (hpcd->Setup[0] & 0xff00) >> 8;
-    const uint16_t wValue = (hpcd->Setup[0] & 0xffff0000) >> 16;
-    const uint8_t descriptor_type = (wValue & 0xff00) >> 8;
-    // const uint8_t descriptor_index = wValue & 0xff;
-
-    if (recipient == to_underlying(recipient::device) && type == to_underlying(type::standard) && direction == to_underlying(direction::device_to_host)) {
-        if (bRequest == to_underlying(request::get_descriptor)) {
-            if (descriptor_type == to_underlying(descriptor::device)) {
-                HAL_PCD_EP_Transmit(&evk_usb_device_hal::hpcd, 0, &evk_usb_device_hal::device_descriptor[0], evk_usb_device_hal::device_descriptor_length);
+    if (bmRequestType.recipient == recipient_t::device && bmRequestType.type == type_t::standard && bmRequestType.direction == direction_t::device_to_host) {
+        if (setup_data.bRequest == request_t::get_descriptor) {
+            const auto descriptor_type = decode_descriptor_type(setup_data.wValue);
+            if (descriptor_type == descriptor_t::device) {
+                HAL_PCD_EP_Transmit(hpcd, 0, &device_descriptor[0], device_descriptor_length);
             }
         }
     }
