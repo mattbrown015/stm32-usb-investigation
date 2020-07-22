@@ -9,6 +9,23 @@ namespace evk_usb_device_hal
 namespace
 {
 
+// From Table 9-2. Format of Setup Data...
+const uint8_t recipient_device = 0x00;
+const uint8_t recipient_mask = 0x1f;
+
+const uint8_t type_standard = 0x00;
+const uint8_t type_mask = 0x60;
+
+const uint8_t direction_device_to_host = 0x80;
+const uint8_t direction_mask = 0x80;
+
+// From Table 9-4. Standard Request Codes...
+const uint8_t request_get_descriptor = 6;
+
+// From Table 9-5. Descriptor Types...
+const uint8_t descriptor_device = 1;
+const uint8_t descriptor_configuration = 2;
+
 const size_t device_descriptor_length = 18;
 uint8_t device_descriptor[device_descriptor_length] = {
     // device descriptor, USB spec 9.6.1
@@ -66,23 +83,6 @@ PCD_HandleTypeDef hpcd = {
 };
 
 void setup_stage_callback(PCD_HandleTypeDef *const hpcd) {
-    // From Table 9-2. Format of Setup Data...
-    const uint8_t recipient_device = 0x00;
-    const uint8_t recipient_mask = 0x1f;
-
-    const uint8_t type_standard = 0x00;
-    const uint8_t type_mask = 0x60;
-
-    const uint8_t direction_device_to_host = 0x80;
-    const uint8_t direction_mask = 0x80;
-
-    // From Table 9-4. Standard Request Codes...
-    const uint8_t request_get_descriptor = 6;
-
-    // From Table 9-5. Descriptor Types...
-    const uint8_t descriptor_device = 1;
-    const uint8_t descriptor_configuration = 2;
-
     const uint8_t bmRequestType = hpcd->Setup[0] & 0xff;
     const uint8_t recipient = bmRequestType & recipient_mask;
     const uint8_t type = bmRequestType & type_mask;
