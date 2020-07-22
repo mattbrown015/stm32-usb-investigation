@@ -150,17 +150,66 @@ descriptor_t decode_descriptor_type(const uint16_t wValue) {
     return static_cast<descriptor_t>((wValue & 0xff00) >> 8);
 }
 
+void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
+    const auto descriptor_type = decode_descriptor_type(setup_data.wValue);
+    switch(descriptor_type) {
+        case descriptor_t::device:
+            HAL_PCD_EP_Transmit(hpcd, 0, &device_descriptor[0], device_descriptor_length);
+            break;
+        case descriptor_t::configuration:
+        case descriptor_t::string:
+        case descriptor_t::interface:
+        case descriptor_t::endpoint:
+        case descriptor_t::device_qualifier:
+        case descriptor_t::other_speed_configuration:
+        case descriptor_t::interface_power:
+            break;
+    }
+}
+
+void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
+    switch (setup_data.bRequest) {
+        case request_t::get_descriptor:
+            get_descriptor(hpcd, setup_data);
+            break;
+        case request_t::get_status:
+        case request_t::clear_feature:
+        case request_t::set_feature:
+        case request_t::set_address:
+        case request_t::set_descriptor:
+        case request_t::get_configuration:
+        case request_t::set_configuration:
+        case request_t::get_interface:
+        case request_t::set_interface:
+        case request_t::synch_frame:
+            break;
+    }
+}
+
+void device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
+    const auto bmRequestType = setup_data.bmRequestType;
+    switch (bmRequestType.type) {
+        case type_t::standard:
+            standard_device_request(hpcd, setup_data);
+            break;
+        case type_t::class_:
+        case type_t::vendor:
+            break;
+    }
+}
+
 void setup_stage_callback(PCD_HandleTypeDef *const hpcd) {
     const auto setup_data = decode_setup_packet(hpcd->Setup);
     const auto bmRequestType = setup_data.bmRequestType;
 
-    if (bmRequestType.recipient == recipient_t::device && bmRequestType.type == type_t::standard && bmRequestType.direction == direction_t::device_to_host) {
-        if (setup_data.bRequest == request_t::get_descriptor) {
-            const auto descriptor_type = decode_descriptor_type(setup_data.wValue);
-            if (descriptor_type == descriptor_t::device) {
-                HAL_PCD_EP_Transmit(hpcd, 0, &device_descriptor[0], device_descriptor_length);
-            }
-        }
+    switch (bmRequestType.recipient) {
+        case recipient_t::device:
+            device_request(hpcd, setup_data);
+            break;
+        case recipient_t::interface:
+        case recipient_t::endpoint:
+        case recipient_t::other:
+            break;
     }
 }
 
