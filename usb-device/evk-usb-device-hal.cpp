@@ -195,6 +195,10 @@ void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &se
             MBED_ASSERT(address > 0 && address < 128);
 
             HAL_PCD_SetAddress(hpcd, address);
+            // From 9.2.6.3 Set Address Processing...
+            //     In the case of the SetAddress() request, the Status stage successfully completes when the device sends
+            //     the zero-length Status packet or when the device sees the ACK in response to the Status stage data packet.
+            // Hence send "zero-length Status packet".
             HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
             break;
         }
