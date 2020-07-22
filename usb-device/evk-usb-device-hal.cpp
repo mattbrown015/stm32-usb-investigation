@@ -3,8 +3,6 @@
 #include <platform/mbed_assert.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 
-#include <type_traits>
-
 namespace evk_usb_device_hal
 {
 
@@ -16,21 +14,24 @@ enum class recipient_t: uint8_t {
     device = 0x00,
     interface = 0x01,
     endpoint = 0x02,
-    other = 0x03,
-    mask = 0x1f
+    other = 0x03
 };
 
 enum class type_t: uint8_t {
     standard = 0x00,
     class_ = 0x20,
-    vendor = 0x40,
-    mask = 0x60
+    vendor = 0x40
 };
 
 enum class direction_t: uint8_t {
     host_to_device = 0x00,
-    device_to_host = 0x80,
-    mask = 0x80
+    device_to_host = 0x80
+};
+
+enum bmRequestType_masks {
+    data_transfer_direction_mask = 0x80,
+    type_mask = 0x60,
+    recipient_mask = 0x1f
 };
 
 // From Table 9-4. Standard Request Codes...
@@ -129,19 +130,13 @@ PCD_HandleTypeDef hpcd = {
     .pData = nullptr,
 };
 
-// https://stackoverflow.com/a/33083231
-template <typename E>
-constexpr auto to_underlying(E e) noexcept {
-    return static_cast<std::underlying_type_t<E>>(e);
-}
-
 setup_data decode_setup_packet(const uint32_t setup[]) {
     const uint8_t bmRequestType = setup[0] & 0xff;
     setup_data setup_data = {
         .bmRequestType = {
-            .direction = static_cast<direction_t>(bmRequestType & to_underlying(direction_t::mask)),
-            .type = static_cast<type_t>(bmRequestType & to_underlying(type_t::mask)),
-            .recipient = static_cast<recipient_t>(bmRequestType & to_underlying(recipient_t::mask))
+            .direction = static_cast<direction_t>(bmRequestType & data_transfer_direction_mask),
+            .type = static_cast<type_t>(bmRequestType & type_mask),
+            .recipient = static_cast<recipient_t>(bmRequestType & recipient_mask)
         },
         .bRequest = static_cast<request_t>((setup[0] & 0xff00) >> 8),
         .wValue = static_cast<uint16_t>((setup[0] & 0xffff0000) >> 16),
