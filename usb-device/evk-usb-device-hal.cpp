@@ -87,6 +87,13 @@ struct setup_data {
 // From 9.2.6.6 Speed Dependent Descriptors...
 const uint16_t usb_version_2_0 = 0x0200;
 
+enum string_index {
+    langid = 0,
+    manufacturer = 1,
+    product = 2,
+    serial_number = 3
+};
+
 const size_t device_descriptor_length = 18;
 uint8_t device_descriptor[device_descriptor_length] = {
     // device descriptor, USB spec 9.6.1
@@ -104,10 +111,39 @@ uint8_t device_descriptor[device_descriptor_length] = {
     msb(0x2012),
     lsb(0x0001),            // bcdDevice
     msb(0x0001),
-    0,                      // iManufacturer
-    0,                      // iProduct
-    0,                      // iSerialNumber
+    string_index::manufacturer,  // iManufacturer
+    string_index::product,  // iProduct
+    string_index::serial_number,  // iSerialNumber
     1                       // bNumConfigurations
+};
+
+// From 9.6.7 String...
+const size_t langid_string_descriptor_length = 4;
+uint8_t langid_string_descriptor[langid_string_descriptor_length] = {
+    langid_string_descriptor_length,  // bLength
+    static_cast<uint8_t>(descriptor_t::string),  // bDescriptorType
+    0x09, 0x04,             // bString Lang ID - 0x0409 - English (United States)
+};
+
+const size_t manufacturer_string_descriptor_length = 8;
+uint8_t manufacturer_string_descriptor[manufacturer_string_descriptor_length] = {
+    manufacturer_string_descriptor_length,  // bLength
+    static_cast<uint8_t>(descriptor_t::string),  // bDescriptorType
+    'M', 0, 'B', 0, 'r', 0  // bString
+};
+
+const size_t product_string_descriptor_length = 8;
+uint8_t product_string_descriptor[product_string_descriptor_length] = {
+    product_string_descriptor_length,  // bLength
+    static_cast<uint8_t>(descriptor_t::string),  // bDescriptorType
+    'E', 0, 'V', 0, 'K', 0  // bString
+};
+
+const size_t serial_number_string_descriptor_length = 10;
+uint8_t serial_number_string_descriptor[serial_number_string_descriptor_length] = {
+    serial_number_string_descriptor_length,  // bLength
+    static_cast<uint8_t>(descriptor_t::string),  // bDescriptorType
+    '0', 0, '0', 0, '0', 0, '1', 0  // bString
 };
 
 const uint8_t default_configuration = 1;
@@ -188,6 +224,10 @@ descriptor_t decode_descriptor_type(const uint16_t wValue) {
     return static_cast<descriptor_t>((wValue & 0xff00) >> 8);
 }
 
+uint16_t decode_string_index(const uint16_t wValue) {
+    return wValue & 0x00ff;
+}
+
 void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     const auto descriptor_type = decode_descriptor_type(setup_data.wValue);
     switch(descriptor_type) {
@@ -213,7 +253,55 @@ void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
                 MBED_ASSERT(false);
             }
             break;
-        case descriptor_t::string:
+        case descriptor_t::string: {
+            const auto string_index = decode_string_index(setup_data.wValue);
+            switch (string_index) {
+                case string_index::langid:
+                    if (setup_data.wLength >= langid_string_descriptor_length) {
+                        HAL_PCD_EP_Transmit(hpcd, 0, &langid_string_descriptor[0], langid_string_descriptor_length);
+                    } else if (setup_data.wLength == 0) {
+                        // This doesn't seem to happen but I think it is within the rules.
+                        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+                    } else {
+                        // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
+                        MBED_ASSERT(false);
+                    }
+                    break;
+                case string_index::manufacturer:
+                    if (setup_data.wLength >= manufacturer_string_descriptor_length) {
+                        HAL_PCD_EP_Transmit(hpcd, 0, &manufacturer_string_descriptor[0], manufacturer_string_descriptor_length);
+                    } else if (setup_data.wLength == 0) {
+                        // This doesn't seem to happen but I think it is within the rules.
+                        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+                    } else {
+                        // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
+                        MBED_ASSERT(false);
+                    }
+                    break;
+                case string_index::product:
+                    if (setup_data.wLength >= product_string_descriptor_length) {
+                        HAL_PCD_EP_Transmit(hpcd, 0, &product_string_descriptor[0], product_string_descriptor_length);
+                    } else if (setup_data.wLength == 0) {
+                        // This doesn't seem to happen but I think it is within the rules.
+                        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+                    } else {
+                        // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
+                        MBED_ASSERT(false);
+                    }
+                    break;
+                case string_index::serial_number:
+                    if (setup_data.wLength >= serial_number_string_descriptor_length) {
+                        HAL_PCD_EP_Transmit(hpcd, 0, &serial_number_string_descriptor[0], serial_number_string_descriptor_length);
+                    } else if (setup_data.wLength == 0) {
+                        // This doesn't seem to happen but I think it is within the rules.
+                        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+                    } else {
+                        // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
+                        MBED_ASSERT(false);
+                    }
+                    break;
+            }
+        }
         case descriptor_t::interface:
         case descriptor_t::endpoint:
         case descriptor_t::device_qualifier:
