@@ -374,11 +374,11 @@ void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_da
 
 void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     switch (setup_data.bRequest) {
-        case request_t::get_descriptor:
-            get_descriptor(hpcd, setup_data);
-            break;
         case request_t::set_address:
             set_address(hpcd, setup_data);
+            break;
+        case request_t::get_descriptor:
+            get_descriptor(hpcd, setup_data);
             break;
         case request_t::set_configuration:
             set_configuration(hpcd, setup_data);
