@@ -107,7 +107,7 @@ uint8_t device_descriptor[device_descriptor_length] = {
     0,                      // iManufacturer
     0,                      // iProduct
     0,                      // iSerialNumber
-    0                       // bNumConfigurations
+    1                       // bNumConfigurations
 };
 
 const uint8_t default_configuration = 1;
