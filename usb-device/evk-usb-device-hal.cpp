@@ -339,6 +339,9 @@ void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
 void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     const auto configuration = setup_data.wValue;
     if (configuration == default_configuration) {
+        HAL_PCD_EP_Open(hpcd, 0x81, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
+        HAL_PCD_EP_Open(hpcd, 0x01, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
+
         // Indicate success...
         HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
     } else {
