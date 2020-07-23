@@ -151,7 +151,8 @@ uint8_t serial_number_string_descriptor[serial_number_string_descriptor_length] 
 const uint8_t default_configuration = 1;
 const size_t configuration_descriptor_length = 9;
 const size_t interface_descriptor_length = 9;
-const size_t total_configuration_descriptor_length = configuration_descriptor_length + interface_descriptor_length;
+const size_t endpoint_descriptor_length = 7;
+const size_t total_configuration_descriptor_length = configuration_descriptor_length + interface_descriptor_length + 2 * endpoint_descriptor_length;
 uint8_t configuration_descriptor[total_configuration_descriptor_length] = {
     // configuration descriptor, USB spec 9.6.3
     configuration_descriptor_length,  // bLength
@@ -169,11 +170,28 @@ uint8_t configuration_descriptor[total_configuration_descriptor_length] = {
     static_cast<uint8_t>(descriptor_t::interface),  // bDescriptorType
     0,                      // bInterfaceNumber
     0,                      // bAlternateSetting
-    0,                      // bNumEndpoints
+    2,                      // bNumEndpoints
     0xff,                   // bInterfaceClass
     0xff,                   // bInterfaceSubClass
     0xff,                   // bInterfaceProtocol
     0,                      // iInterface
+
+    // endpoint descriptor, USB spec 9.6.6
+    endpoint_descriptor_length, // bLength
+    static_cast<uint8_t>(descriptor_t::endpoint),  // bDescriptorType
+    0x81,                   // bEndpointAddress - EP1 bulk in
+    EP_TYPE_BULK,           // bmAttributes
+    lsb(USB_OTG_HS_MAX_PACKET_SIZE),  // wMaxPacketSize
+    msb(USB_OTG_HS_MAX_PACKET_SIZE),
+    1,                      // bInterval
+
+    endpoint_descriptor_length, // bLength
+    static_cast<uint8_t>(descriptor_t::endpoint),  // bDescriptorType
+    0x01,                   // bEndpointAddress - EP1 bulk out
+    EP_TYPE_BULK,           // bmAttributes
+    lsb(USB_OTG_HS_MAX_PACKET_SIZE),  // wMaxPacketSize
+    msb(USB_OTG_HS_MAX_PACKET_SIZE),
+    1,                      // bInterval
 };
 
 PCD_HandleTypeDef hpcd = {
