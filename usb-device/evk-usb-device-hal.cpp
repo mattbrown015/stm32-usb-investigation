@@ -229,85 +229,60 @@ uint16_t decode_string_index(const uint16_t wValue) {
 }
 
 void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
-    const auto descriptor_type = decode_descriptor_type(setup_data.wValue);
-    switch(descriptor_type) {
-        case descriptor_t::device:
-            if (setup_data.wLength >= device_descriptor_length) {
-                HAL_PCD_EP_Transmit(hpcd, 0, &device_descriptor[0], device_descriptor_length);
-            } else if (setup_data.wLength == 0) {
-                // This doesn't seem to happen but I think it is within the rules.
-                HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
-            } else {
-                // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
-                MBED_ASSERT(false);
+    uint8_t *pBuf = nullptr;
+    uint32_t len = 0;
+
+    // I thought I had read in the spec that the request can have zero length in which case
+    // there's no point decoding the request because nothing can be returned.
+    // Although I haven't seen this happen yet.
+    if (setup_data.wLength > 0) {
+        const auto descriptor_type = decode_descriptor_type(setup_data.wValue);
+        switch(descriptor_type) {
+            case descriptor_t::device:
+                pBuf = &device_descriptor[0];
+                len = device_descriptor_length;
+                break;
+            case descriptor_t::configuration:
+                pBuf = &configuration_descriptor[0];
+                len = total_configuration_descriptor_length;
+                break;
+            case descriptor_t::string: {
+                const auto string_index = decode_string_index(setup_data.wValue);
+                switch (string_index) {
+                    case string_index::langid:
+                        pBuf = &langid_string_descriptor[0];
+                        len = langid_string_descriptor_length;
+                        break;
+                    case string_index::manufacturer:
+                        pBuf = &manufacturer_string_descriptor[0];
+                        len = manufacturer_string_descriptor_length;
+                        break;
+                    case string_index::product:
+                        pBuf = &product_string_descriptor[0];
+                        len = product_string_descriptor_length;
+                        break;
+                    case string_index::serial_number:
+                        pBuf = &serial_number_string_descriptor[0];
+                        len = serial_number_string_descriptor_length;
+                        break;
+                }
+                break;
             }
-            break;
-        case descriptor_t::configuration:
-            if (setup_data.wLength >= total_configuration_descriptor_length) {
-                HAL_PCD_EP_Transmit(hpcd, 0, &configuration_descriptor[0], total_configuration_descriptor_length);
-            } else if (setup_data.wLength == 0) {
-                // This doesn't seem to happen but I think it is within the rules.
-                HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
-            } else {
-                // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
-                MBED_ASSERT(false);
-            }
-            break;
-        case descriptor_t::string: {
-            const auto string_index = decode_string_index(setup_data.wValue);
-            switch (string_index) {
-                case string_index::langid:
-                    if (setup_data.wLength >= langid_string_descriptor_length) {
-                        HAL_PCD_EP_Transmit(hpcd, 0, &langid_string_descriptor[0], langid_string_descriptor_length);
-                    } else if (setup_data.wLength == 0) {
-                        // This doesn't seem to happen but I think it is within the rules.
-                        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
-                    } else {
-                        // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
-                        MBED_ASSERT(false);
-                    }
-                    break;
-                case string_index::manufacturer:
-                    if (setup_data.wLength >= manufacturer_string_descriptor_length) {
-                        HAL_PCD_EP_Transmit(hpcd, 0, &manufacturer_string_descriptor[0], manufacturer_string_descriptor_length);
-                    } else if (setup_data.wLength == 0) {
-                        // This doesn't seem to happen but I think it is within the rules.
-                        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
-                    } else {
-                        // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
-                        MBED_ASSERT(false);
-                    }
-                    break;
-                case string_index::product:
-                    if (setup_data.wLength >= product_string_descriptor_length) {
-                        HAL_PCD_EP_Transmit(hpcd, 0, &product_string_descriptor[0], product_string_descriptor_length);
-                    } else if (setup_data.wLength == 0) {
-                        // This doesn't seem to happen but I think it is within the rules.
-                        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
-                    } else {
-                        // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
-                        MBED_ASSERT(false);
-                    }
-                    break;
-                case string_index::serial_number:
-                    if (setup_data.wLength >= serial_number_string_descriptor_length) {
-                        HAL_PCD_EP_Transmit(hpcd, 0, &serial_number_string_descriptor[0], serial_number_string_descriptor_length);
-                    } else if (setup_data.wLength == 0) {
-                        // This doesn't seem to happen but I think it is within the rules.
-                        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
-                    } else {
-                        // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
-                        MBED_ASSERT(false);
-                    }
-                    break;
-            }
+            case descriptor_t::interface:
+            case descriptor_t::endpoint:
+            case descriptor_t::device_qualifier:
+            case descriptor_t::other_speed_configuration:
+            case descriptor_t::interface_power:
+                break;
         }
-        case descriptor_t::interface:
-        case descriptor_t::endpoint:
-        case descriptor_t::device_qualifier:
-        case descriptor_t::other_speed_configuration:
-        case descriptor_t::interface_power:
-            break;
+    }
+
+    if (len <= setup_data.wLength) {
+        HAL_PCD_EP_Transmit(hpcd, 0, pBuf, len);
+    } else {
+        // I haven't accounted for the request length being shorter than the descriptor because I haven't seen it happen.
+        // If/when it does happen it is necessary to implement a mechanism for sending the data in multiple packets.
+        MBED_ASSERT(false);
     }
 }
 
