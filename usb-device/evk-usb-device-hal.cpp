@@ -240,7 +240,7 @@ device_state_t device_state = device_state_t::default_;
 // A static buffer is required for the response to a 'Get Status' request.
 // I think the '0x1' indicates 'self-powered' but I'm not sure we are 'self-powered'
 // and I'm not sure this is the correct bit position.
-uint8_t get_status_status[2] = { 0x01, 0x00 };
+uint8_t device_get_status_status[2] = { 0x01, 0x00 };
 
 constexpr uint8_t lsb(const uint16_t word) {
     // Not sure that the explicit mask is necessary.
@@ -338,13 +338,13 @@ void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
     }
 }
 
-void get_status(PCD_HandleTypeDef *const hpcd, const uint16_t wLength) {
+void device_get_status(PCD_HandleTypeDef *const hpcd, const uint16_t wLength) {
     // Should solicit USB error response but this will do for now.
     MBED_ASSERT(wLength == 2);
     // Not being in one of these states should really solicit a USB error but the implementation doesn't support this yet.
     MBED_ASSERT(device_state == device_state_t::default_ || device_state == device_state_t::addressed || device_state == device_state_t::configured);
 
-    HAL_PCD_EP_Transmit(hpcd, 0, &get_status_status[0], 2);
+    HAL_PCD_EP_Transmit(hpcd, 0, &device_get_status_status[0], 2);
 }
 
 void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
@@ -391,7 +391,7 @@ void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_da
 void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     switch (setup_data.bRequest) {
         case request_t::get_status:
-            get_status(hpcd, setup_data.wLength);
+            device_get_status(hpcd, setup_data.wLength);
             break;
         case request_t::set_address:
             set_address(hpcd, setup_data);
