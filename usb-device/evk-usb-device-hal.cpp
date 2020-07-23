@@ -303,26 +303,29 @@ void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
     }
 }
 
+void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
+    MBED_ASSERT(setup_data.wIndex == 0);
+    MBED_ASSERT(setup_data.wLength == 0);
+
+    const uint8_t address = setup_data.wValue;
+    MBED_ASSERT(address > 0 && address < 128);
+
+    HAL_PCD_SetAddress(hpcd, address);
+    // From 9.2.6.3 Set Address Processing...
+    //     In the case of the SetAddress() request, the Status stage successfully completes when the device sends
+    //     the zero-length Status packet or when the device sees the ACK in response to the Status stage data packet.
+    // Hence send "zero-length Status packet".
+    HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+}
+
 void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     switch (setup_data.bRequest) {
         case request_t::get_descriptor:
             get_descriptor(hpcd, setup_data);
             break;
-        case request_t::set_address: {
-            MBED_ASSERT(setup_data.wIndex == 0);
-            MBED_ASSERT(setup_data.wLength == 0);
-
-            const uint8_t address = setup_data.wValue;
-            MBED_ASSERT(address > 0 && address < 128);
-
-            HAL_PCD_SetAddress(hpcd, address);
-            // From 9.2.6.3 Set Address Processing...
-            //     In the case of the SetAddress() request, the Status stage successfully completes when the device sends
-            //     the zero-length Status packet or when the device sees the ACK in response to the Status stage data packet.
-            // Hence send "zero-length Status packet".
-            HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+        case request_t::set_address:
+            set_address(hpcd, setup_data);
             break;
-        }
         case request_t::get_status:
         case request_t::clear_feature:
         case request_t::set_feature:
