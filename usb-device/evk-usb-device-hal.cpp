@@ -293,6 +293,8 @@ void get_string_descriptor(const uint16_t string_index, uint8_t *&pBuf, uint32_t
             pBuf = &serial_number_string_descriptor[0];
             len = serial_number_string_descriptor_length;
             break;
+        default:
+            MBED_ASSERT(false);
     }
 }
 
@@ -323,7 +325,7 @@ void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
             case descriptor_t::device_qualifier:
             case descriptor_t::other_speed_configuration:
             case descriptor_t::interface_power:
-                break;
+                MBED_ASSERT(false);
         }
     }
 
@@ -407,7 +409,7 @@ void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &se
         case request_t::get_interface:
         case request_t::set_interface:
         case request_t::synch_frame:
-            break;
+            MBED_ASSERT(false);
     }
 }
 
@@ -419,7 +421,7 @@ void device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
             break;
         case type_t::class_:
         case type_t::vendor:
-            break;
+            MBED_ASSERT(false);
     }
 }
 
@@ -434,7 +436,7 @@ void setup_stage_callback(PCD_HandleTypeDef *const hpcd) {
         case recipient_t::interface:
         case recipient_t::endpoint:
         case recipient_t::other:
-            break;
+            MBED_ASSERT(false);
     }
 }
 
