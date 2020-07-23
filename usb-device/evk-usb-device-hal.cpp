@@ -64,6 +64,13 @@ enum class descriptor_t: uint8_t {
     interface_power = 8
 };
 
+// From Table 9-10. Standard Configuration Descriptor...
+enum configuration_attributes {
+    configuration_attributes_reserved = 0x80,
+    configuration_attributes_self_powered = 0x60,
+    configuration_attributes_remote_wakeup = 0x40
+};
+
 // From Table 9-2. Format of Setup Data...
 struct setup_data {
     struct request_type {
@@ -101,6 +108,22 @@ uint8_t device_descriptor[device_descriptor_length] = {
     0,                      // iProduct
     0,                      // iSerialNumber
     0                       // bNumConfigurations
+};
+
+const uint8_t default_configuration = 1;
+const size_t configuration_descriptor_length = 9;
+const size_t total_configuration_descriptor_length = configuration_descriptor_length;
+uint8_t configuration_descriptor[total_configuration_descriptor_length] = {
+    // configuration descriptor, USB spec 9.6.3
+    configuration_descriptor_length,  // bLength
+    static_cast<uint8_t>(descriptor_t::configuration),  // bDescriptorType
+    lsb(total_configuration_descriptor_length),  // wTotalLength
+    msb(total_configuration_descriptor_length),
+    0,                      // bNumInterfaces
+    default_configuration,  // bConfigurationValue
+    0,                      // iConfiguration
+    configuration_attributes_reserved,  // bmAttributes
+    50,                     // bMaxPower
 };
 
 PCD_HandleTypeDef hpcd = {
@@ -180,6 +203,16 @@ void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
             }
             break;
         case descriptor_t::configuration:
+            if (setup_data.wLength >= total_configuration_descriptor_length) {
+                HAL_PCD_EP_Transmit(hpcd, 0, &configuration_descriptor[0], total_configuration_descriptor_length);
+            } else if (setup_data.wLength == 0) {
+                // This doesn't seem to happen but I think it is within the rules.
+                HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+            } else {
+                // I haven't accounted for the request length being shorter than the device descriptor because I haven't seen it happen.
+                MBED_ASSERT(false);
+            }
+            break;
         case descriptor_t::string:
         case descriptor_t::interface:
         case descriptor_t::endpoint:
