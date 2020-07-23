@@ -317,6 +317,19 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
     HAL_PCD_EP_Open(hpcd, ep0_in_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
 }
 
+void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
+    // Simplified version of 'USBD_LL_DataInStage' in
+    // 'STM32Cube_FW_F7_V1.16.0/Projects/STM32F723E-Discovery/Applications/USB_Device/HID_Standalone/Src/usbd_core.c'.
+    if (epnum == 0) {
+        // I can't reconcile this with the USB spec but this gets called a number of times during the setup stage.
+        // I think the host is sending the device status packets and it is necessary to /receive/ these packets
+        // to ensure EP0 state is correct.
+        // I only realised this was necessary when attempting to send the configuration descriptor, I don't know
+        // why it became important at this point.
+        HAL_PCD_EP_Receive(hpcd, 0x00, nullptr, 0);
+    }
+}
+
 // 'HAL_PCD_IRQHandler' decodes setup packets, puts the payload in 'hpcd->Setup'
 // and calls 'HAL_PCD_SetupStageCallback'.
 // The packet is described in the USB Spec 9.3 USB Device Requests.
