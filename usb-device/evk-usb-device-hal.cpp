@@ -228,6 +228,27 @@ uint16_t decode_string_index(const uint16_t wValue) {
     return wValue & 0x00ff;
 }
 
+void get_string_descriptor(const uint16_t string_index, uint8_t *&pBuf, uint32_t &len) {
+    switch (string_index) {
+        case string_index::langid:
+            pBuf = &langid_string_descriptor[0];
+            len = langid_string_descriptor_length;
+            break;
+        case string_index::manufacturer:
+            pBuf = &manufacturer_string_descriptor[0];
+            len = manufacturer_string_descriptor_length;
+            break;
+        case string_index::product:
+            pBuf = &product_string_descriptor[0];
+            len = product_string_descriptor_length;
+            break;
+        case string_index::serial_number:
+            pBuf = &serial_number_string_descriptor[0];
+            len = serial_number_string_descriptor_length;
+            break;
+    }
+}
+
 void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     uint8_t *pBuf = nullptr;
     uint32_t len = 0;
@@ -247,25 +268,7 @@ void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
                 len = total_configuration_descriptor_length;
                 break;
             case descriptor_t::string: {
-                const auto string_index = decode_string_index(setup_data.wValue);
-                switch (string_index) {
-                    case string_index::langid:
-                        pBuf = &langid_string_descriptor[0];
-                        len = langid_string_descriptor_length;
-                        break;
-                    case string_index::manufacturer:
-                        pBuf = &manufacturer_string_descriptor[0];
-                        len = manufacturer_string_descriptor_length;
-                        break;
-                    case string_index::product:
-                        pBuf = &product_string_descriptor[0];
-                        len = product_string_descriptor_length;
-                        break;
-                    case string_index::serial_number:
-                        pBuf = &serial_number_string_descriptor[0];
-                        len = serial_number_string_descriptor_length;
-                        break;
-                }
+                get_string_descriptor(decode_string_index(setup_data.wValue), pBuf, len);
                 break;
             }
             case descriptor_t::interface:
