@@ -3,6 +3,8 @@
 #include <platform/mbed_assert.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 
+#include <algorithm>
+
 namespace evk_usb_device_hal
 {
 
@@ -160,6 +162,7 @@ uint8_t configuration_descriptor[total_configuration_descriptor_length] = {
     0,                      // iConfiguration
     configuration_attributes_reserved,  // bmAttributes
     50,                     // bMaxPower
+
 };
 
 PCD_HandleTypeDef hpcd = {
@@ -265,7 +268,7 @@ void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
                 break;
             case descriptor_t::configuration:
                 pBuf = &configuration_descriptor[0];
-                len = total_configuration_descriptor_length;
+                len = std::min(static_cast<uint32_t>(setup_data.wLength), static_cast<uint32_t>(total_configuration_descriptor_length));
                 break;
             case descriptor_t::string: {
                 get_string_descriptor(decode_string_index(setup_data.wValue), pBuf, len);
