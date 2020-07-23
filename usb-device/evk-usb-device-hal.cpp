@@ -318,6 +318,19 @@ void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
 }
 
+void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
+    const auto configuration = setup_data.wValue;
+    if (configuration == default_configuration) {
+        // Indicate success...
+        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+    } else {
+        // The configuration can be 0 in which case the device should enter the 'Address state'.
+        // See 9.4.7 Set Configuration.
+        // But, I haven't seen this happen.
+        MBED_ASSERT(false);
+    }
+}
+
 void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     switch (setup_data.bRequest) {
         case request_t::get_descriptor:
@@ -326,12 +339,14 @@ void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &se
         case request_t::set_address:
             set_address(hpcd, setup_data);
             break;
+        case request_t::set_configuration:
+            set_configuration(hpcd, setup_data);
+            break;
         case request_t::get_status:
         case request_t::clear_feature:
         case request_t::set_feature:
         case request_t::set_descriptor:
         case request_t::get_configuration:
-        case request_t::set_configuration:
         case request_t::get_interface:
         case request_t::set_interface:
         case request_t::synch_frame:
