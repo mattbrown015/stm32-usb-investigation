@@ -14,6 +14,14 @@ namespace
 constexpr uint8_t lsb(const uint16_t word);
 constexpr uint8_t msb(const uint16_t word);
 
+// 9.1 USB Device States describes the various states.
+// I'm hoping we are only interested in a subset of states of the states described in the spec.
+enum class device_state_t {
+    default_,
+    addressed,
+    configured
+};
+
 // From Table 9-2. Format of Setup Data...
 enum class recipient_t: uint8_t {
     device = 0x00,
@@ -227,6 +235,8 @@ PCD_HandleTypeDef hpcd = {
     .pData = nullptr,
 };
 
+device_state_t device_state = device_state_t::default_;
+
 constexpr uint8_t lsb(const uint16_t word) {
     // Not sure that the explicit mask is necessary.
     return word & 0xff;
@@ -325,8 +335,11 @@ void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     MBED_ASSERT(setup_data.wIndex == 0);
     MBED_ASSERT(setup_data.wLength == 0);
 
+    // Should really respond with a USB error but this will do for starters.
+    MBED_ASSERT(device_state != device_state_t::configured);
+
     const uint8_t address = setup_data.wValue;
-    MBED_ASSERT(address > 0 && address < 128);
+    MBED_ASSERT(address < 128);
 
     HAL_PCD_SetAddress(hpcd, address);
     // From 9.2.6.3 Set Address Processing...
@@ -334,6 +347,8 @@ void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     //     the zero-length Status packet or when the device sees the ACK in response to the Status stage data packet.
     // Hence send "zero-length Status packet".
     HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+
+    device_state = address != 0 ? device_state_t::addressed : device_state_t::default_;
 }
 
 void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
@@ -344,6 +359,11 @@ void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_da
 
         // Indicate success...
         HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+
+        device_state = device_state_t::configured;
+    } else if (configuration == 0) {
+        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+        device_state = device_state_t::addressed;
     } else {
         // The configuration can be 0 in which case the device should enter the 'Address state'.
         // See 9.4.7 Set Configuration.
@@ -462,6 +482,8 @@ extern "C" void OTG_HS_IRQHandler() {
 // This is a significantly simplified version of 'HAL_PCD_ResetCallback' from 'usbd_conf.c'.
 // A USB device must always have EP0 open for In and OUT transactions.
 void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
+    evk_usb_device_hal::device_state = evk_usb_device_hal::device_state_t::default_;
+
     const uint8_t ep0_out_ep_addr = 0x00;
     HAL_PCD_EP_Open(hpcd, ep0_out_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
 
