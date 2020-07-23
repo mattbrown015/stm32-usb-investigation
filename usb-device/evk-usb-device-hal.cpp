@@ -150,19 +150,30 @@ uint8_t serial_number_string_descriptor[serial_number_string_descriptor_length] 
 
 const uint8_t default_configuration = 1;
 const size_t configuration_descriptor_length = 9;
-const size_t total_configuration_descriptor_length = configuration_descriptor_length;
+const size_t interface_descriptor_length = 9;
+const size_t total_configuration_descriptor_length = configuration_descriptor_length + interface_descriptor_length;
 uint8_t configuration_descriptor[total_configuration_descriptor_length] = {
     // configuration descriptor, USB spec 9.6.3
     configuration_descriptor_length,  // bLength
     static_cast<uint8_t>(descriptor_t::configuration),  // bDescriptorType
     lsb(total_configuration_descriptor_length),  // wTotalLength
     msb(total_configuration_descriptor_length),
-    0,                      // bNumInterfaces
+    1,                      // bNumInterfaces
     default_configuration,  // bConfigurationValue
     0,                      // iConfiguration
     configuration_attributes_reserved,  // bmAttributes
     50,                     // bMaxPower
 
+    // interface descriptor, USB spec 9.6.5
+    interface_descriptor_length, // bLength
+    static_cast<uint8_t>(descriptor_t::interface),  // bDescriptorType
+    0,                      // bInterfaceNumber
+    0,                      // bAlternateSetting
+    0,                      // bNumEndpoints
+    0xff,                   // bInterfaceClass
+    0xff,                   // bInterfaceSubClass
+    0xff,                   // bInterfaceProtocol
+    0,                      // iInterface
 };
 
 PCD_HandleTypeDef hpcd = {
