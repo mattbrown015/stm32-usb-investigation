@@ -48,7 +48,7 @@ enum bmRequestType_masks {
 };
 
 // From Table 9-4. Standard Request Codes...
-enum class request_t: uint8_t {
+enum class standard_request_codes: uint8_t {
     get_status = 0,
     clear_feature = 1,
     set_feature = 3,
@@ -88,7 +88,7 @@ struct setup_data {
         type_t type;
         recipient_t recipient;
     } bmRequestType;
-    request_t bRequest;
+    uint8_t bRequest;
     uint16_t wValue;
     uint16_t wIndex;
     uint16_t wLength;
@@ -254,7 +254,7 @@ setup_data decode_setup_packet(const uint32_t setup[]) {
             .type = static_cast<type_t>(bmRequestType & type_mask),
             .recipient = static_cast<recipient_t>(bmRequestType & recipient_mask)
         },
-        .bRequest = static_cast<request_t>((setup[0] & 0xff00) >> 8),
+        .bRequest = static_cast<uint8_t>((setup[0] & 0xff00) >> 8),
         .wValue = static_cast<uint16_t>((setup[0] & 0xffff0000) >> 16),
         .wIndex = static_cast<uint16_t>(setup[1] & 0x0000ffff),
         .wLength = static_cast<uint16_t>((setup[1] & 0xffff0000) >> 16)
@@ -389,26 +389,26 @@ void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_da
 }
 
 void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
-    switch (setup_data.bRequest) {
-        case request_t::get_status:
+    switch (static_cast<standard_request_codes>(setup_data.bRequest)) {
+        case standard_request_codes::get_status:
             device_get_status(hpcd, setup_data.wLength);
             break;
-        case request_t::set_address:
+        case standard_request_codes::set_address:
             set_address(hpcd, setup_data);
             break;
-        case request_t::get_descriptor:
+        case standard_request_codes::get_descriptor:
             get_descriptor(hpcd, setup_data);
             break;
-        case request_t::set_configuration:
+        case standard_request_codes::set_configuration:
             set_configuration(hpcd, setup_data);
             break;
-        case request_t::clear_feature:
-        case request_t::set_feature:
-        case request_t::set_descriptor:
-        case request_t::get_configuration:
-        case request_t::get_interface:
-        case request_t::set_interface:
-        case request_t::synch_frame:
+        case standard_request_codes::clear_feature:
+        case standard_request_codes::set_feature:
+        case standard_request_codes::set_descriptor:
+        case standard_request_codes::get_configuration:
+        case standard_request_codes::get_interface:
+        case standard_request_codes::set_interface:
+        case standard_request_codes::synch_frame:
             MBED_ASSERT(false);
     }
 }
