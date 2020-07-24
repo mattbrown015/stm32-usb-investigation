@@ -432,7 +432,7 @@ void vendor_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setu
                 HAL_PCD_EP_Receive(hpcd, ep0_in_ep_addr, vendor_request_receive_buffer.data(), len);
                 HAL_PCD_EP_Transmit(hpcd, ep0_out_ep_addr, nullptr, 0);
 
-                evk_usb_device_hal::vendor_request_receive_buffer_ready = true;
+                vendor_request_receive_buffer_ready = true;
             }
             break;
         default:
