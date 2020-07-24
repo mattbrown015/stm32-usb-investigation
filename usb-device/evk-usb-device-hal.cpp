@@ -325,7 +325,7 @@ void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
     }
 
     if (len <= setup_data.wLength) {
-        HAL_PCD_EP_Transmit(hpcd, 0, pBuf, len);
+        HAL_PCD_EP_Transmit(hpcd, 0x00, pBuf, len);
     } else {
         // I haven't accounted for the request length being shorter than the descriptor because I haven't seen it happen.
         // If/when it does happen it is necessary to implement a mechanism for sending the data in multiple packets.
@@ -344,7 +344,7 @@ void device_get_status(PCD_HandleTypeDef *const hpcd, const uint16_t wLength) {
     // Not being in one of these states should really solicit a USB error but the implementation doesn't support this yet.
     MBED_ASSERT(device_state == device_state_t::default_ || device_state == device_state_t::addressed || device_state == device_state_t::configured);
 
-    HAL_PCD_EP_Transmit(hpcd, 0, &status[0], 2);
+    HAL_PCD_EP_Transmit(hpcd, 0x00, &status[0], 2);
 }
 
 void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
@@ -362,7 +362,7 @@ void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     //     In the case of the SetAddress() request, the Status stage successfully completes when the device sends
     //     the zero-length Status packet or when the device sees the ACK in response to the Status stage data packet.
     // Hence send "zero-length Status packet".
-    HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+    HAL_PCD_EP_Transmit(hpcd, 0x00, nullptr, 0);
 
     device_state = address != 0 ? device_state_t::addressed : device_state_t::default_;
 }
@@ -374,11 +374,11 @@ void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_da
         HAL_PCD_EP_Open(hpcd, 0x01, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
 
         // Indicate success...
-        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+        HAL_PCD_EP_Transmit(hpcd, 0x00, nullptr, 0);
 
         device_state = device_state_t::configured;
     } else if (configuration == 0) {
-        HAL_PCD_EP_Transmit(hpcd, 0, nullptr, 0);
+        HAL_PCD_EP_Transmit(hpcd, 0x00, nullptr, 0);
         device_state = device_state_t::addressed;
     } else {
         // The configuration can be 0 in which case the device should enter the 'Address state'.
