@@ -555,11 +555,9 @@ void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
     // Simplified version of 'USBD_LL_DataInStage' in
     // 'STM32Cube_FW_F7_V1.16.0/Projects/STM32F723E-Discovery/Applications/USB_Device/HID_Standalone/Src/usbd_core.c'.
     if (epnum == 0) {
-        // I can't reconcile this with the USB spec but this gets called a number of times during the setup stage.
-        // I think the host is sending the device status packets and it is necessary to /receive/ these packets
-        // to ensure EP0 state is correct.
-        // I only realised this was necessary when attempting to send the configuration descriptor, I don't know
-        // why it became important at this point.
+        // I believe it is necessary for the device to receive the ack sent by the host in the status stage of the sequence.
+        // See Figure 8-37. Control Read and Write Sequences.
+        // I don't understand what happens if the host doesn't send the ack or sends a nak or something.
         HAL_PCD_EP_Receive(hpcd, evk_usb_device_hal::ep0_out_ep_addr, nullptr, 0);
     }
 }
