@@ -106,6 +106,8 @@ enum string_index {
 
 const uint8_t ep0_out_ep_addr = 0x00;
 const uint8_t ep0_in_ep_addr = 0x80;
+const uint8_t ep1_out_ep_addr = 0x01;
+const uint8_t ep1_in_ep_addr = 0x81;
 
 const size_t device_descriptor_length = 18;
 uint8_t device_descriptor[device_descriptor_length] = {
@@ -190,7 +192,7 @@ uint8_t configuration_descriptor[total_configuration_descriptor_length] = {
     // endpoint descriptor, USB spec 9.6.6
     endpoint_descriptor_length, // bLength
     static_cast<uint8_t>(descriptor_t::endpoint),  // bDescriptorType
-    0x81,                   // bEndpointAddress - EP1 bulk in
+    ep1_in_ep_addr,         // bEndpointAddress - EP1 bulk in
     EP_TYPE_BULK,           // bmAttributes
     lsb(USB_OTG_HS_MAX_PACKET_SIZE),  // wMaxPacketSize
     msb(USB_OTG_HS_MAX_PACKET_SIZE),
@@ -198,7 +200,7 @@ uint8_t configuration_descriptor[total_configuration_descriptor_length] = {
 
     endpoint_descriptor_length, // bLength
     static_cast<uint8_t>(descriptor_t::endpoint),  // bDescriptorType
-    0x01,                   // bEndpointAddress - EP1 bulk out
+    ep1_out_ep_addr,        // bEndpointAddress - EP1 bulk out
     EP_TYPE_BULK,           // bmAttributes
     lsb(USB_OTG_HS_MAX_PACKET_SIZE),  // wMaxPacketSize
     msb(USB_OTG_HS_MAX_PACKET_SIZE),
@@ -373,8 +375,8 @@ void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
 void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     const auto configuration = setup_data.wValue;
     if (configuration == default_configuration) {
-        HAL_PCD_EP_Open(hpcd, 0x81, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
-        HAL_PCD_EP_Open(hpcd, 0x01, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
+        HAL_PCD_EP_Open(hpcd, ep1_in_ep_addr, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
+        HAL_PCD_EP_Open(hpcd, ep1_out_ep_addr, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
 
         // Indicate success...
         HAL_PCD_EP_Transmit(hpcd, ep0_out_ep_addr, nullptr, 0);
