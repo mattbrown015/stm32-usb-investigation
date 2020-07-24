@@ -3,6 +3,7 @@
 #include <platform/mbed_assert.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 
+#include <array>
 #include <algorithm>
 
 namespace evk_usb_device_hal
@@ -242,6 +243,9 @@ PCD_HandleTypeDef hpcd = {
 
 device_state_t device_state = device_state_t::default_;
 
+std::array<uint8_t, 10> vendor_request_receive_buffer{ 0x00 };  // usb-host does a /test/ control out request with a payload of
+bool vendor_request_receive_buffer_ready = false;
+
 constexpr uint8_t lsb(const uint16_t word) {
     // Not sure that the explicit mask is necessary.
     return word & 0xff;
@@ -418,6 +422,24 @@ void standard_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &se
     }
 }
 
+void vendor_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
+    switch (setup_data.bRequest) {
+        case 0:
+            if (setup_data.bmRequestType.direction == direction_t::host_to_device) {
+                vendor_request_receive_buffer.fill(0);
+
+                const auto len = std::min(static_cast<uint32_t>(setup_data.wLength), static_cast<uint32_t>(vendor_request_receive_buffer.size()));
+                HAL_PCD_EP_Receive(hpcd, ep0_in_ep_addr, vendor_request_receive_buffer.data(), len);
+                HAL_PCD_EP_Transmit(hpcd, ep0_out_ep_addr, nullptr, 0);
+
+                evk_usb_device_hal::vendor_request_receive_buffer_ready = true;
+            }
+            break;
+        default:
+            MBED_ASSERT(false);
+    }
+}
+
 void device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     const auto bmRequestType = setup_data.bmRequestType;
     switch (bmRequestType.type) {
@@ -425,8 +447,10 @@ void device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
             standard_device_request(hpcd, setup_data);
             break;
         case type_t::class_:
-        case type_t::vendor:
             MBED_ASSERT(false);
+        case type_t::vendor:
+            vendor_device_request(hpcd, setup_data);
+            break;
     }
 }
 
@@ -510,6 +534,17 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
     HAL_PCD_EP_Open(hpcd, evk_usb_device_hal::ep0_out_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
 
     HAL_PCD_EP_Open(hpcd, evk_usb_device_hal::ep0_in_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
+}
+
+void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
+    if (epnum == 0) {
+        if (evk_usb_device_hal::vendor_request_receive_buffer_ready) {
+            if (evk_usb_device_hal::vendor_request_receive_buffer != std::array<uint8_t, 10>{"some data"}) {
+                MBED_ASSERT(false);
+            }
+            evk_usb_device_hal::vendor_request_receive_buffer_ready = false;
+        }
+    }
 }
 
 void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
