@@ -433,6 +433,10 @@ void vendor_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setu
                 HAL_PCD_EP_Transmit(hpcd, ep0_out_ep_addr, nullptr, 0);
 
                 vendor_request_receive_buffer_ready = true;
+            } else {
+                static std::array<uint8_t, 13> send_request_data{ "send request" };
+                const auto len = std::min<uint32_t>(setup_data.wLength, send_request_data.size());
+                HAL_PCD_EP_Transmit(hpcd, ep0_out_ep_addr, send_request_data.data(), len);
             }
             break;
         default:
