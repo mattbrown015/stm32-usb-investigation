@@ -318,7 +318,7 @@ void get_descriptor(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
                 break;
             case descriptor_t::configuration:
                 pBuf = &configuration_descriptor[0];
-                len = std::min(static_cast<uint32_t>(setup_data.wLength), static_cast<uint32_t>(total_configuration_descriptor_length));
+                len = std::min<uint32_t>(setup_data.wLength, total_configuration_descriptor_length);
                 break;
             case descriptor_t::string: {
                 get_string_descriptor(decode_string_index(setup_data.wValue), pBuf, len);
@@ -428,7 +428,7 @@ void vendor_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setu
             if (setup_data.bmRequestType.direction == direction_t::host_to_device) {
                 vendor_request_receive_buffer.fill(0);
 
-                const auto len = std::min(static_cast<uint32_t>(setup_data.wLength), static_cast<uint32_t>(vendor_request_receive_buffer.size()));
+                const auto len = std::min<uint32_t>(setup_data.wLength, vendor_request_receive_buffer.size());
                 HAL_PCD_EP_Receive(hpcd, ep0_in_ep_addr, vendor_request_receive_buffer.data(), len);
                 HAL_PCD_EP_Transmit(hpcd, ep0_out_ep_addr, nullptr, 0);
 
