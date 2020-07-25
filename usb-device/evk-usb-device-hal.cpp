@@ -248,7 +248,7 @@ std::array<uint8_t, 10> vendor_request_receive_buffer{ 0x00 };  // usb-host does
 bool vendor_request_receive_buffer_ready = false;
 
 std::array<uint8_t, 64> ep1_transmit_buffer;
-std::array<uint8_t, 512> ep1_receive_buffer;
+std::array<uint8_t, USB_OTG_HS_MAX_PACKET_SIZE> ep1_receive_buffer;
 
 constexpr uint8_t lsb(const uint16_t word) {
     // Not sure that the explicit mask is necessary.
