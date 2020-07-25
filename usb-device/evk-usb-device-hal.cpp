@@ -246,6 +246,8 @@ device_state_t device_state = device_state_t::default_;
 std::array<uint8_t, 10> vendor_request_receive_buffer{ 0x00 };  // usb-host does a /test/ control out request with a payload of
 bool vendor_request_receive_buffer_ready = false;
 
+std::array<uint8_t, 512> ep1_receive_buffer;
+
 constexpr uint8_t lsb(const uint16_t word) {
     // Not sure that the explicit mask is necessary.
     return word & 0xff;
@@ -379,8 +381,11 @@ void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
 void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     const auto configuration = setup_data.wValue;
     if (configuration == default_configuration) {
+        // Open the bulk endpoints...
         HAL_PCD_EP_Open(hpcd, ep1_in_ep_addr, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
         HAL_PCD_EP_Open(hpcd, ep1_out_ep_addr, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
+        // and prepare for an out transfer...
+        HAL_PCD_EP_Receive(hpcd, ep1_out_ep_addr, ep1_receive_buffer.data(), ep1_receive_buffer.size());
 
         // Indicate success...
         HAL_PCD_EP_Transmit(hpcd, ep0_out_ep_addr, nullptr, 0);
@@ -548,6 +553,11 @@ void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
             }
             evk_usb_device_hal::vendor_request_receive_buffer_ready = false;
         }
+    } else if (epnum == 1) {
+        // ep1_receive_buffer contains data from the bulk transfer so clear ready for the next transfer...
+        evk_usb_device_hal::ep1_receive_buffer.fill(0);
+        // Prepare for another transfer...
+        HAL_PCD_EP_Receive(hpcd, evk_usb_device_hal::ep1_out_ep_addr, evk_usb_device_hal::ep1_receive_buffer.data(), evk_usb_device_hal::ep1_receive_buffer.size());
     }
 }
 
