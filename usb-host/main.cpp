@@ -2,19 +2,21 @@
 
 #include <libusb-1.0/libusb.h>
 
-#include <array>
 #include <cassert>
 #include <chrono>
 #include <cinttypes>
 #include <cstdio>
 #include <numeric>
+#include <vector>
 
 namespace
 {
 
 const uint8_t invalid_ep_address = 0xff;
-uint8_t epbulk_in = invalid_ep_address;
-uint8_t epbulk_out = invalid_ep_address;
+uint8_t epbulk_in_address = invalid_ep_address;
+uint16_t epbulk_in_mps = 0;
+uint8_t epbulk_out_address = invalid_ep_address;
+uint16_t epbulk_out_mps = 0;
 
 void print_libusb_error(const libusb_error error, const char *const libusb_api_function)  {
     printf("'%s' failed, error value %d, error name '%s', error description '%s'\n", libusb_api_function, error, libusb_error_name(error), libusb_strerror(error));
@@ -84,18 +86,20 @@ bool get_endpoint_addresses(libusb_device *const device) {
     for (auto i = 0; i < interface_descriptor->bNumEndpoints; ++i) {
         const auto bEndpointAddress = endpoint_descriptor->bEndpointAddress;
         const auto bmAttributes = endpoint_descriptor->bmAttributes;
-        printf("bEndpointAddress 0x%" PRIx8 " bmAttributes 0x%" PRIx8 "\n", bEndpointAddress, bmAttributes);
+        const auto wMaxPacketSize = endpoint_descriptor->wMaxPacketSize;
+        printf("bEndpointAddress 0x%" PRIx8 " bmAttributes 0x%" PRIx8 " wMaxPacketSize 0x%" PRIx16 "\n", bEndpointAddress, bmAttributes, wMaxPacketSize);
 
         const bool is_in = (bEndpointAddress & LIBUSB_ENDPOINT_IN) == LIBUSB_ENDPOINT_IN;
         const bool is_bulk = bmAttributes == LIBUSB_TRANSFER_TYPE_BULK;
         if (is_in && is_bulk) {
-            epbulk_in = bEndpointAddress;
+            epbulk_in_address = bEndpointAddress;
+            epbulk_in_mps = wMaxPacketSize;
             break;
         }
 
         ++endpoint_descriptor;
     }
-    if (epbulk_in == invalid_ep_address) {
+    if (epbulk_in_address == invalid_ep_address) {
         puts("failed to find bulk in endpoint");
         goto free_and_exit;
     }
@@ -104,18 +108,20 @@ bool get_endpoint_addresses(libusb_device *const device) {
     for (auto i = 0; i < interface_descriptor->bNumEndpoints; ++i) {
         const auto bEndpointAddress = endpoint_descriptor->bEndpointAddress;
         const auto bmAttributes = endpoint_descriptor->bmAttributes;
-        printf("bEndpointAddress 0x%" PRIx8 " bmAttributes 0x%" PRIx8 "\n", bEndpointAddress, bmAttributes);
+        const auto wMaxPacketSize = endpoint_descriptor->wMaxPacketSize;
+        printf("bEndpointAddress 0x%" PRIx8 " bmAttributes 0x%" PRIx8 " wMaxPacketSize 0x%" PRIx16 "\n", bEndpointAddress, bmAttributes, wMaxPacketSize);
 
         const bool is_out = (bEndpointAddress & LIBUSB_ENDPOINT_IN) == LIBUSB_ENDPOINT_OUT;
         const bool is_bulk = bmAttributes == LIBUSB_TRANSFER_TYPE_BULK;
         if (is_out && is_bulk) {
-            epbulk_out = bEndpointAddress;
+            epbulk_out_address = bEndpointAddress;
+            epbulk_out_mps = wMaxPacketSize;
             break;
         }
 
         ++endpoint_descriptor;
     }
-    if (epbulk_out == invalid_ep_address) {
+    if (epbulk_out_address == invalid_ep_address) {
         puts("failed to find bulk out endpoint");
         goto free_and_exit;
     }
@@ -250,13 +256,14 @@ bool control_transfer_in(libusb_device_handle *const device_handle) {
 }
 
 bool bulk_transfer_in(libusb_device_handle *const device_handle) {
-    assert(epbulk_in != invalid_ep_address);
+    assert(epbulk_in_address != invalid_ep_address);
+    assert(epbulk_in_mps != 0);
 
-    unsigned char data[64] = { 0 };
+    unsigned char data[epbulk_in_mps] = { 0 };
     int transferred = 0;
     const auto error = libusb_bulk_transfer(
             device_handle,
-            epbulk_in,
+            epbulk_in_address,
             &data[0],
             sizeof(data),
             &transferred,
@@ -266,7 +273,7 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
         print_libusb_error(static_cast<libusb_error>(error), "libusb_bulk_transfer");
         return false;
     } else {
-        std::array<unsigned char, 64> expected;
+        std::vector<unsigned char> expected(epbulk_in_mps);
         std::iota(std::begin(expected), std::end(expected), 1);
         if (!std::equal(std::begin(expected), std::end(expected), data)) {
             for (auto i = 0u; i < sizeof(data); ++i) {
@@ -292,7 +299,7 @@ bool repeat_bulk_in_transfer(libusb_device_handle *const device_handle) {
     const auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
 
     printf("duration_us %lld us\n", duration_us);
-    const auto throughput_bytes_per_us = (64.0 * usb_device::number_of_bulk_in_repeats) / duration_us;
+    const auto throughput_bytes_per_us = (static_cast<double>(epbulk_in_mps) * usb_device::number_of_bulk_in_repeats) / duration_us;
     const auto throughput_bytes_per_s = throughput_bytes_per_us * 100000;
     const auto throughput_megabytes_per_s = throughput_bytes_per_s / 100000;
     const auto throughput_megabits_per_s = throughput_megabytes_per_s * 8;
@@ -304,14 +311,15 @@ bool repeat_bulk_in_transfer(libusb_device_handle *const device_handle) {
 }
 
 bool bulk_transfer_out(libusb_device_handle *const device_handle) {
-    assert(epbulk_out != invalid_ep_address);
+    assert(epbulk_out_address != invalid_ep_address);
+    assert(epbulk_out_mps != 0);
 
-    std::array<unsigned char, 64> data;
+    std::vector<unsigned char> data(epbulk_out_mps);
     std::iota(std::begin(data), std::end(data), 2);
     int transferred = 0;
     const auto error = libusb_bulk_transfer(
             device_handle,
-            epbulk_out,
+            epbulk_out_address,
             data.data(),
             data.size(),
             &transferred,
