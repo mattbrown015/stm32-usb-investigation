@@ -3,8 +3,9 @@
 #include <platform/mbed_assert.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 
-#include <array>
 #include <algorithm>
+#include <array>
+#include <numeric>
 
 namespace evk_usb_device_hal
 {
@@ -246,6 +247,7 @@ device_state_t device_state = device_state_t::default_;
 std::array<uint8_t, 10> vendor_request_receive_buffer{ 0x00 };  // usb-host does a /test/ control out request with a payload of
 bool vendor_request_receive_buffer_ready = false;
 
+std::array<uint8_t, 64> ep1_transmit_buffer;
 std::array<uint8_t, 512> ep1_receive_buffer;
 
 constexpr uint8_t lsb(const uint16_t word) {
@@ -381,13 +383,15 @@ void set_address(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
 void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
     const auto configuration = setup_data.wValue;
     if (configuration == default_configuration) {
-        // Open the bulk endpoints...
+        // Open the bulk in endpoint and prepare to transmit data when host requests it.
         HAL_PCD_EP_Open(hpcd, ep1_in_ep_addr, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
+        HAL_PCD_EP_Transmit(hpcd, ep1_in_ep_addr, ep1_transmit_buffer.data(), ep1_transmit_buffer.size());
+
+        // Open the bulk out endpoint and prepare to receive data when the host sends it.
         HAL_PCD_EP_Open(hpcd, ep1_out_ep_addr, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
-        // and prepare for an out transfer...
         HAL_PCD_EP_Receive(hpcd, ep1_out_ep_addr, ep1_receive_buffer.data(), ep1_receive_buffer.size());
 
-        // Indicate success...
+        // Indicate configuration successfully set...
         HAL_PCD_EP_Transmit(hpcd, ep0_out_ep_addr, nullptr, 0);
 
         device_state = device_state_t::configured;
@@ -481,6 +485,8 @@ void setup_stage_callback(PCD_HandleTypeDef *const hpcd) {
 }
 
 void init() {
+    std::iota(std::begin(ep1_transmit_buffer), std::end(ep1_transmit_buffer), 1);
+
     // 'STM32Cube_FW_F7_V1.16.0/Projects/STM32F723E-Discovery/Applications/USB_Device/HID_Standalone/Src/usbd_conf.c'
     // uses 'HAL_PCD_MspInit' to do some of the configuration. 'HAL_PCD_MspInit' is called from 'HAL_PCD_Init' and it is
     // intended that the application will use it for low level configuration such as clocks and GPIOs.
@@ -569,6 +575,9 @@ void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
         // See Figure 8-37. Control Read and Write Sequences.
         // I don't understand what happens if the host doesn't send the ack or sends a nak or something.
         HAL_PCD_EP_Receive(hpcd, evk_usb_device_hal::ep0_out_ep_addr, nullptr, 0);
+    } else if (epnum == 1) {
+        // Prepare for another transfer...
+        HAL_PCD_EP_Transmit(hpcd, evk_usb_device_hal::ep1_in_ep_addr, evk_usb_device_hal::ep1_transmit_buffer.data(), evk_usb_device_hal::ep1_transmit_buffer.size());
     }
 }
 
