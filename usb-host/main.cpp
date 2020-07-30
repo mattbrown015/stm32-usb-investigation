@@ -270,7 +270,7 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
             &data[0],
             length,
             &transferred,
-            1
+            100 // ms
         );
     if (error < 0) {
         print_libusb_error(static_cast<libusb_error>(error), "libusb_bulk_transfer");
