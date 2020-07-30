@@ -278,7 +278,7 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
             printf("Number of bytes actually transferred not the same as the requested length, transferred %d, length %d", transferred, length);
             return false;
         }
-        std::vector<unsigned char> expected(epbulk_in_mps);
+        std::vector<unsigned char> expected(length);
         std::iota(std::begin(expected), std::end(expected), 1);
         if (!std::equal(std::begin(expected), std::end(expected), data)) {
             for (auto i = 0u; i < sizeof(data); ++i) {
