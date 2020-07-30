@@ -1,5 +1,7 @@
 #include "evk-usb-device-hal.h"
 
+#include "usb-device.h"
+
 #include <platform/mbed_assert.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 
@@ -254,8 +256,8 @@ device_state_t device_state = device_state_t::default_;
 std::array<uint8_t, 10> vendor_request_receive_buffer{ 0x00 };  // usb-host does a /test/ control out request with a payload of
 bool vendor_request_receive_buffer_ready = false;
 
-std::array<uint8_t, USB_OTG_HS_MAX_PACKET_SIZE> ep1_transmit_buffer;
-std::array<uint8_t, USB_OTG_HS_MAX_PACKET_SIZE> ep1_receive_buffer;
+std::array<uint8_t, usb_device::bulk_transfer_length> ep1_transmit_buffer;
+std::array<uint8_t, usb_device::bulk_transfer_length> ep1_receive_buffer;
 
 constexpr uint8_t lsb(const uint16_t word) {
     // Not sure that the explicit mask is necessary.
