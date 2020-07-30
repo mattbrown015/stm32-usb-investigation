@@ -38,7 +38,7 @@ private:
         // The maximum packet size should be 512 but when it is 512
         // the assert at USBPhy_STM32.cpp:471 fires.
         // I guess this is related to 'tx_ep_sizes' in USBPhy_STM32.cpp.
-        64 /*USB_OTG_HS_MAX_PACKET_SIZE*/
+        USB_OTG_HS_MAX_PACKET_SIZE
 #elif (MBED_CONF_TARGET_USB_SPEED == USE_USB_OTG_FS)
         USB_OTG_FS_MAX_PACKET_SIZE
 #else
