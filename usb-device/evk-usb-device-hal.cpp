@@ -1,5 +1,7 @@
 #include "evk-usb-device-hal.h"
 
+#if !defined(DEVICE_USBDEVICE)
+
 #include "usb-device.h"
 
 #include <platform/mbed_assert.h>
@@ -643,3 +645,5 @@ void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
 {
     evk_usb_device_hal::setup_stage_callback(hpcd);
 }
+
+#endif
