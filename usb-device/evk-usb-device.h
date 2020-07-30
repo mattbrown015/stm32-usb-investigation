@@ -4,6 +4,8 @@
 #if defined(DEVICE_USBDEVICE)
 
 #include <drivers/internal/USBDevice.h>
+#include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/CMSIS/stm32f7xx.h>
+#include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_usb.h>
 
 namespace EvkUSBDevice
 {
@@ -28,9 +30,22 @@ private:
     void callback_set_interface(uint16_t interface, uint8_t alternate) override;
 
 private:
-    // The derivation of the maximum packet size is not yet clear to me.
-    // 64 appears a great deal in the examples so it is what I'm using for now.
-    static const auto maximum_packet_size = 64;
+    // The USB standard states that the maximum packet size for ctrl endpoints, like endpoint 0, is 64 bytes.
+    static const auto ep0_maximum_packet_size = USB_OTG_MAX_EP0_SIZE;
+    // The maximum packet size for bulk endpoints depends on the USB speed.
+    static const auto bulk_ep_maximum_packet_size =
+#if (MBED_CONF_TARGET_USB_SPEED == USE_USB_OTG_HS)
+        // The maximum packet size should be 512 but when it is 512
+        // the assert at USBPhy_STM32.cpp:471 fires.
+        // I guess this is related to 'tx_ep_sizes' in USBPhy_STM32.cpp.
+        64 /*USB_OTG_HS_MAX_PACKET_SIZE*/
+#elif (MBED_CONF_TARGET_USB_SPEED == USE_USB_OTG_FS)
+        USB_OTG_FS_MAX_PACKET_SIZE
+#else
+# error unexpected USB speed
+#endif
+        ;
+
 
     static const uint8_t default_configuration = 1;
     static const size_t configuration_descriptor_length = 32;
@@ -38,7 +53,7 @@ private:
 
     usb_ep_t epbulk_in;
     usb_ep_t epbulk_out;
-    uint8_t epbulk_out_buffer[maximum_packet_size];
+    uint8_t epbulk_out_buffer[bulk_ep_maximum_packet_size];
     uint32_t epbulk_out_buffer_bytes_available;
 
     void epbulk_in_callback();

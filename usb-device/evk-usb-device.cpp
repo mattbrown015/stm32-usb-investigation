@@ -30,10 +30,10 @@ const uint32_t read_finished_flag = 1 << 2;
 
 EvkUSBDevice::EvkUSBDevice() : USBDevice(get_usb_phy(), 0x1f00, 0x2012, 0x0001) {
     EndpointResolver resolver(endpoint_table());
-    resolver.endpoint_ctrl(maximum_packet_size);
-    epbulk_in = resolver.endpoint_in(USB_EP_TYPE_BULK, maximum_packet_size);
+    resolver.endpoint_ctrl(ep0_maximum_packet_size);
+    epbulk_in = resolver.endpoint_in(USB_EP_TYPE_BULK, bulk_ep_maximum_packet_size);
     MBED_ASSERT(epbulk_in != 0); // Possibly covered by 'resolver.valid' but so what if it is /belt and braces/!
-    epbulk_out = resolver.endpoint_out(USB_EP_TYPE_BULK, maximum_packet_size);
+    epbulk_out = resolver.endpoint_out(USB_EP_TYPE_BULK, bulk_ep_maximum_packet_size);
     MBED_ASSERT(epbulk_out != 0); // Possibly covered by 'resolver.valid' but so what if it is /belt and braces/!
     MBED_ASSERT(resolver.valid());
 
@@ -112,16 +112,16 @@ const uint8_t *EvkUSBDevice::configuration_desc(uint8_t index) {
         ENDPOINT_DESCRIPTOR,    // bDescriptorType
         epbulk_in,              // bEndpointAddress
         E_BULK,                 // bmAttributes
-        LSB(maximum_packet_size), // wMaxPacketSize
-        MSB(maximum_packet_size),
+        LSB(bulk_ep_maximum_packet_size), // wMaxPacketSize
+        MSB(bulk_ep_maximum_packet_size),
         1,                      // bInterval
 
         ENDPOINT_DESCRIPTOR_LENGTH, // bLength
         ENDPOINT_DESCRIPTOR,    // bDescriptorType
         epbulk_out,             // bEndpointAddress
         E_BULK,                 // bmAttributes
-        LSB(maximum_packet_size), // wMaxPacketSize
-        MSB(maximum_packet_size),
+        LSB(bulk_ep_maximum_packet_size), // wMaxPacketSize
+        MSB(bulk_ep_maximum_packet_size),
         1,                      // bInterval
     };
 
@@ -176,9 +176,9 @@ void EvkUSBDevice::callback_set_configuration(uint8_t configuration) {
 
     auto success = false;
     if (configuration == default_configuration) {
-        MBED_UNUSED const auto add_epbulk_in_res = endpoint_add(epbulk_in, maximum_packet_size, USB_EP_TYPE_BULK, &EvkUSBDevice::epbulk_in_callback);
+        MBED_UNUSED const auto add_epbulk_in_res = endpoint_add(epbulk_in, bulk_ep_maximum_packet_size, USB_EP_TYPE_BULK, &EvkUSBDevice::epbulk_in_callback);
         MBED_ASSERT(add_epbulk_in_res);
-        MBED_UNUSED const auto add_epbulk_out_res = endpoint_add(epbulk_out, maximum_packet_size, USB_EP_TYPE_BULK, &EvkUSBDevice::epbulk_out_callback);
+        MBED_UNUSED const auto add_epbulk_out_res = endpoint_add(epbulk_out, bulk_ep_maximum_packet_size, USB_EP_TYPE_BULK, &EvkUSBDevice::epbulk_out_callback);
         MBED_ASSERT(add_epbulk_out_res);
 
         MBED_UNUSED const auto read_start_result = read_start(epbulk_out, &epbulk_out_buffer[0], sizeof(epbulk_out_buffer));
