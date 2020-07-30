@@ -50,6 +50,8 @@ void EvkUSBDevice::wait_configured() {
 }
 
 uint32_t EvkUSBDevice::bulk_in_transfer(uint8_t *const buffer, const uint32_t size) {
+    MBED_ASSERT(size <= bulk_ep_maximum_packet_size);
+
     MBED_UNUSED const auto clear_result = event_flags.clear(write_finished_flag);
     MBED_ASSERT(!(clear_result & osFlagsError));
 
@@ -64,6 +66,8 @@ uint32_t EvkUSBDevice::bulk_in_transfer(uint8_t *const buffer, const uint32_t si
 }
 
 uint32_t EvkUSBDevice::bulk_out_transfer(uint8_t *const buffer, const uint32_t size) {
+    MBED_ASSERT(size <= bulk_ep_maximum_packet_size);
+
     MBED_UNUSED const auto wait_result = event_flags.wait_all(read_finished_flag);
     MBED_ASSERT(!(wait_result & osFlagsError));
 

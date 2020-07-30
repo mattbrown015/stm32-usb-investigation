@@ -42,7 +42,7 @@ EvkUSBDevice::EvkUSBDevice evk_usb_device;
 
 void repeat_bulk_in_transfer() {
     printf("perform %d bulk in transfers\n", usb_device::number_of_bulk_in_repeats);
-    std::array<unsigned char, 64> buffer;
+    std::array<unsigned char, usb_device::bulk_transfer_length> buffer;
     std::iota(std::begin(buffer), std::end(buffer), 1);
 
     for (auto i = 0; i < usb_device::number_of_bulk_in_repeats; ++i) {
@@ -62,7 +62,7 @@ void wait_until_configured() {
     repeat_bulk_in_transfer();
 
     puts("perform bulk out transfer");
-    std::array<unsigned char, 64> buffer{ 0 };
+    std::array<unsigned char, usb_device::bulk_transfer_length> buffer{ 0 };
     const auto out_number_of_bytes_transferred = evk_usb_device.bulk_out_transfer(buffer.data(), buffer.size());
     printf("out_number_of_bytes_transferred %" PRIi32 "\n", out_number_of_bytes_transferred);
 
