@@ -22,3 +22,93 @@ Creating an Mbed OS custom target is straightforward, see (Adding and configurin
 MBed OS does not enforce the use of the Mbed OS abstractions of target peripherals.  In other words, it is possible to use the STM32CubeF7 USB HAL rather than the [USB APIs](https://os.mbed.com/docs/mbed-os/v6.2/apis/usb-apis.html).  Using the HAL means the project is not portable to other targets but this is not a problem for this investigation.
 
 Mbed OS does not include the *middleware components* that are include in the STM distribution of [STM32CubeF7](https://www.st.com/content/st_com/en/products/embedded-software/mcu-mpu-embedded-software/stm32-embedded-software/stm32cube-mcu-mpu-packages/stm32cubef7.html).  I decided it would make a better learning opportunity to use the USB HAL and not attempt to combine the STM32CubeF7 USB *middleware component*.  I did use the STM32CubeF7 USB *middleware component* as a reference.
+
+## Results
+
+In all the tests the USB device was connected to a laptop host port labelled 'SS'.  The blue ports didn't work and the various 'SS' ports all seemed to give the same throughput.
+
+### FS and Mbed OS USB
+
+The first thing I got working used the FS port of the 32F723EDISCOVERY and was derived from `USBDevice`.
+
+This is USB FS and hence the bulk endpoint maximum packet size (MPS) has to be 64 bytes.  The transfer size is also restricted to 64 bytes.
+
+The throughput appeared to be around 3 Mbit/s out of a possible 12 Mbit/s.  This feels pretty average but for a first stab there's not much to say.  I know I want to investigate USB HS so there's no point trying to optimise the FS performance.
+
+    perform 10000 bulk in transfers
+    duration_us 1624392 us
+    throughput MB/s 0.393994
+    throughput Mbit/s 3.151949
+    completed 10000 bulk in transfers
+
+## HS and Mbed OS USB
+
+After making a *fix* to Mbed OS, see https://github.com/mattbrown015/mbed-os, I got the test working using the USB HS port.
+
+The bulk endpoint MPS and transfer size was still only 64 bytes because Mbed OS didn't allow anything.
+
+The throughput didn't appear to change.
+
+    perform 10000 bulk in transfers
+    duration_us 1323553 us
+    throughput MB/s 0.483547
+    throughput Mbit/s 3.868376
+    completed 10000 bulk in transfers
+
+I tried switching on compiler optimisations but it didn't change the results.  The throughput is dominated by the USB not the CPU.
+
+## HS and USB HAL
+
+It took a while to work out how to use the USB HAL but I got there in the end.
+
+Using the USB HAL made it possible to increase the bulk endpoint MPS to 512 bytes and perform transfers that are larger than one packet.
+
+### Transfer Size 512 bytes and MPS 512 bytes
+
+With the MPS as 512 bytes and the transfer size 512 bytes, i.e. 1 packet, the throughput increased to around 30 Mbit/s out of a possible 480 Mbit/s.  This is definitely disappointing but it does confirm that it is USB HS (if the test can be trusted).
+
+    perform 10000 bulk in transfers
+    duration_us 1366002 us
+    throughput MB/s 3.748164
+    throughput Mbit/s 29.985315
+    completed 10000 bulk in transfers
+
+### Transfer Size 1024 bytes and MPS 512 bytes
+
+Increasing the transfer size to 1024 bytes makes a significant difference to the throughput, up to 50 Mbit/s from 30 Mbit/s.
+
+I believe this is because it takes much less CPU work to prepare 1 1024 byte transfer as opposed to two 512 byte transfers.  I believe the STM puts all 1024 bytes in the TX FIFO at the same time and both packets will be sent without further CPU intervention.  I don't know how this is handled at the host/PC/libusb end but it is possible that it is all handled via DMA and/or in kernel space.
+
+    perform 10000 bulk in transfers
+    duration_us 1520971 us
+    throughput MB/s 6.732541
+    throughput Mbit/s 53.860330
+    completed 10000 bulk in transfers
+
+I removed the test of the bulk IN data in 'usb-host' and this increased the throughput to 60 Mbit/s.  This implies that we were wasting some bandwidth by not feeding the USB pipe.  All of the following tests will be done without the bulk IN data test.
+
+    perform 10000 bulk in transfers
+    duration_us 1349877 us
+    throughput MB/s 7.585876
+    throughput Mbit/s 60.687011
+    completed 10000 bulk in transfers
+
+### Transfer Size 65536 bytes and MPS 512 bytes
+
+Increasing the transfer size has a significant impact.  The throughput appears to be 270 Mbit/s when the transfer size is 65536 bytes.  I'd be happy if this throughput was maintained when the device also has to gather the data and the host has to do something with it.
+
+    perform 10000 bulk in transfers
+    duration_us 19334584 us
+    throughput MB/s 33.895738
+    throughput Mbit/s 271.165907
+    completed 10000 bulk in transfers
+
+### Transfer Size 65536 bytes and MPS 64 bytes
+
+Using a smaller MPS has some impact but perhaps not as much as I was expecting, 170 Mbit/s is still none too shabby!
+
+    perform 10000 bulk in transfers
+    duration_us 31220706 us
+    throughput MB/s 20.991197
+    throughput Mbit/s 167.929579
+    completed 10000 bulk in transfers
