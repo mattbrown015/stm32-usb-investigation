@@ -1,6 +1,7 @@
 #if !defined(DEVICE_USBDEVICE)
 
 #include "evk-usb-device-hal.h"
+#include "show-running.h"
 
 #include <rtos/ThisThread.h>
 
@@ -8,6 +9,8 @@
 
 int main() {
     puts("usb-device-use-hal");
+
+    show_running::init();
 
     evk_usb_device_hal::init();
 
