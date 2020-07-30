@@ -259,7 +259,7 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
     assert(epbulk_in_address != invalid_ep_address);
     assert(epbulk_in_mps != 0);
 
-    unsigned char data[epbulk_in_mps] = { 0 };
+    unsigned char data[usb_device::bulk_transfer_length] = { 0 };
     const int length = sizeof(data);
     int transferred = 0;
     const auto error = libusb_bulk_transfer(
@@ -304,7 +304,7 @@ bool repeat_bulk_in_transfer(libusb_device_handle *const device_handle) {
     const auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
 
     printf("duration_us %lld us\n", duration_us);
-    const auto throughput_bytes_per_us = (static_cast<double>(epbulk_in_mps) * usb_device::number_of_bulk_in_repeats) / duration_us;
+    const auto throughput_bytes_per_us = (static_cast<double>(usb_device::bulk_transfer_length) * usb_device::number_of_bulk_in_repeats) / duration_us;
     const auto throughput_bytes_per_s = throughput_bytes_per_us * 100000;
     const auto throughput_megabytes_per_s = throughput_bytes_per_s / 100000;
     const auto throughput_megabits_per_s = throughput_megabytes_per_s * 8;
@@ -319,7 +319,7 @@ bool bulk_transfer_out(libusb_device_handle *const device_handle) {
     assert(epbulk_out_address != invalid_ep_address);
     assert(epbulk_out_mps != 0);
 
-    std::vector<unsigned char> data(epbulk_out_mps);
+    std::vector<unsigned char> data(usb_device::bulk_transfer_length);
     std::iota(std::begin(data), std::end(data), 2);
     const int length = data.size();
     int transferred = 0;
