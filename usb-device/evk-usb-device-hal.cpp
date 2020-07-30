@@ -76,6 +76,13 @@ enum class descriptor_t: uint8_t {
     interface_power = 8
 };
 
+// From Table 9-6. Standard Feature Selectors...
+enum class standard_feature_selector_t: uint16_t {
+    endpoint_halt = 0,
+    device_remote_wakeup = 1,
+    test_mode = 2
+};
+
 // From Table 9-10. Standard Configuration Descriptor...
 enum configuration_attributes {
     configuration_attributes_reserved = 0x80,
@@ -467,6 +474,50 @@ void device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data)
     }
 }
 
+void endpoint_clear(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
+    if (device_state == device_state_t::configured) {
+        const standard_feature_selector_t feature_selector_value = static_cast<standard_feature_selector_t>(setup_data.wValue);
+        if (feature_selector_value == standard_feature_selector_t::endpoint_halt) {
+            const uint16_t ep_addr = setup_data.wIndex;
+            if ((ep_addr & 0x7f) != 0x00) {
+                HAL_PCD_EP_ClrStall(hpcd, ep_addr);
+            }
+            HAL_PCD_EP_Transmit(hpcd, ep0_out_ep_addr, nullptr, 0);
+        }
+    }
+}
+
+void standard_endpoint_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
+    switch (static_cast<standard_request_codes>(setup_data.bRequest)) {
+        case standard_request_codes::clear_feature:
+            endpoint_clear(hpcd, setup_data);
+            break;
+        case standard_request_codes::get_status:
+        case standard_request_codes::set_address:
+        case standard_request_codes::get_descriptor:
+        case standard_request_codes::set_configuration:
+        case standard_request_codes::set_feature:
+        case standard_request_codes::set_descriptor:
+        case standard_request_codes::get_configuration:
+        case standard_request_codes::get_interface:
+        case standard_request_codes::set_interface:
+        case standard_request_codes::synch_frame:
+            MBED_ASSERT(false);
+    }
+}
+
+void endpoint_request(PCD_HandleTypeDef *const hpcd, const setup_data &setup_data) {
+    const auto bmRequestType = setup_data.bmRequestType;
+    switch (bmRequestType.type) {
+        case type_t::standard:
+            standard_endpoint_request(hpcd, setup_data);
+            break;
+        case type_t::class_:
+        case type_t::vendor:
+            MBED_ASSERT(false);
+    }
+}
+
 void setup_stage_callback(PCD_HandleTypeDef *const hpcd) {
     const auto setup_data = decode_setup_packet(hpcd->Setup);
     const auto bmRequestType = setup_data.bmRequestType;
@@ -475,8 +526,10 @@ void setup_stage_callback(PCD_HandleTypeDef *const hpcd) {
         case recipient_t::device:
             device_request(hpcd, setup_data);
             break;
-        case recipient_t::interface:
         case recipient_t::endpoint:
+            endpoint_request(hpcd, setup_data);
+            break;
+        case recipient_t::interface:
         case recipient_t::other:
             MBED_ASSERT(false);
     }
