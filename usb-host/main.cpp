@@ -260,12 +260,13 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
     assert(epbulk_in_mps != 0);
 
     unsigned char data[epbulk_in_mps] = { 0 };
+    const int length = sizeof(data);
     int transferred = 0;
     const auto error = libusb_bulk_transfer(
             device_handle,
             epbulk_in_address,
             &data[0],
-            sizeof(data),
+            length,
             &transferred,
             1
         );
@@ -273,6 +274,10 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
         print_libusb_error(static_cast<libusb_error>(error), "libusb_bulk_transfer");
         return false;
     } else {
+        if (transferred != length) {
+            printf("Number of bytes actually transferred not the same as the requested length, transferred %d, length %d", transferred, length);
+            return false;
+        }
         std::vector<unsigned char> expected(epbulk_in_mps);
         std::iota(std::begin(expected), std::end(expected), 1);
         if (!std::equal(std::begin(expected), std::end(expected), data)) {
@@ -316,12 +321,13 @@ bool bulk_transfer_out(libusb_device_handle *const device_handle) {
 
     std::vector<unsigned char> data(epbulk_out_mps);
     std::iota(std::begin(data), std::end(data), 2);
+    const int length = data.size();
     int transferred = 0;
     const auto error = libusb_bulk_transfer(
             device_handle,
             epbulk_out_address,
             data.data(),
-            data.size(),
+            length,
             &transferred,
             1
         );
@@ -329,6 +335,10 @@ bool bulk_transfer_out(libusb_device_handle *const device_handle) {
         print_libusb_error(static_cast<libusb_error>(error), "libusb_bulk_transfer");
         return false;
     } else {
+        if (transferred != length) {
+            printf("Number of bytes actually transferred not the same as the requested length, transferred %d, length %d", transferred, length);
+            return false;
+        }
         return true;
     }
 }
