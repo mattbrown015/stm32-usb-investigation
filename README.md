@@ -143,3 +143,27 @@ I think this is because the Tx FIFO empty level (TXFELVL) is set so that the TXF
     throughput MB/s 32.611653
     throughput Mbit/s 260.893226
     completed 10000 bulk in transfers
+
+#### Impact of DMA
+
+The USB HS core includes a DMA engine to relieve the CPU of the onerous task of moving larger packets, e.g. 512 bytes, to/from system RAM.
+
+As I understand it, the CPU stills takes the TXFE interrupt and has to manage the data being sent/received but the DMA handles the data copy.  In other words, the CPU has to something for every packet sent but it is much less when using DMA.
+
+Using the DMA appears to improve the throughput slightly when the transfer is very large but it probably pulls more weight when the CPU has something else to do.
+
+##### Transfer Size 1024 bytes, MPS 512 bytes and DMA
+
+perform 10000 bulk in transfers
+duration_us 1392012 us
+throughput MB/s 7.356258
+throughput Mbit/s 58.850067
+completed 10000 bulk in transfers
+
+##### Transfer Size 65536 bytes, MPS 512 bytes and DMA
+
+perform 10000 bulk in transfers
+duration_us 19222769 us
+throughput MB/s 34.092903
+throughput Mbit/s 272.743224
+completed 10000 bulk in transfers
