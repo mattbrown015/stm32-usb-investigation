@@ -571,11 +571,11 @@ void init() {
     // that not all the words should be allocated here.
     // 'USBPhyHw::init' is a poor example because it thinks there is only '1.25 kbytes' of RAM available.
 
-#undef MAXIMISE_TXFIFO_SIZE  // For now I'm going to stick with FIFO configuration from the examples, perhaps if/when the endpoint configuration gets more complicated this will need revisiting.
-#if defined(MAXIMISE_TXFIFO_SIZE)
     const auto hs_usb_data_fifo_ram_size_bytes = 4096;
     const auto hs_usb_data_fifo_ram_size = hs_usb_data_fifo_ram_size_bytes / 4;  // I.e. 0x400 words
 
+#undef MAXIMISE_TXFIFO_SIZE  // For now I'm going to stick with FIFO configuration from the examples, perhaps if/when the endpoint configuration gets more complicated this will need revisiting.
+#if defined(MAXIMISE_TXFIFO_SIZE)
     // From 32.11.3 FIFO RAM allocation...
     //     10 locations must be reserved in the receive FIFO to receive SETUP packets on control endpoint. The core does not use these locations, which are reserved for SETUP packets, to write any other data.
     // This isn't shown the equation in the RM and it's possible/probably I don't understand.
@@ -615,10 +615,22 @@ void init() {
     //     Packets of varying sizes can be received so allocate an arbitrarily large RX FIFO i.e. half the available space.
     //     Control packets on EP0 have a max size of 64 bytes so I think 0x80 means there's room for 8 TX control packets in the FIFO.
     //     TX packets on EP1 could be 512 bytes so 0x174 words (1488 bytes) means there's room for nearly 3 packets in the FIFO.
-    // 'usbd_conf.c' leaves 12 words unallocated i.e. 0x200 + 0x80 + 0x174 = 0x400 - 12. Several times I read something in the RM that I think explains this but then later change my mind!
-    HAL_PCDEx_SetRxFiFo(&hpcd, 0x200);  // Rx FIFO size must be set first
-    HAL_PCDEx_SetTxFiFo(&hpcd, 0, 0x80);  // Tx FIFOs for IN endpoints must be set in order
-    HAL_PCDEx_SetTxFiFo(&hpcd, 1, 0x174);
+    // 'usbd_conf.c' leaves 12 words unallocated i.e. 0x200 + 0x80 + 0x174 = 0x400 - 12. I've never understood why...
+    //     HAL_PCDEx_SetRxFiFo(&hpcd, 0x200);
+    //     HAL_PCDEx_SetTxFiFo(&hpcd, 0, 0x80);
+    //     HAL_PCDEx_SetTxFiFo(&hpcd, 1, 0x174);
+    // I found a different example, 'STM32Cube_FW_F7_V1.16.0/Projects/STM32746G-Discovery/Applications/USB_Device/DFU_Standalone/Src/usbd_conf.c', that allocates all of the data RAM...
+    //      HAL_PCDEx_SetRxFiFo(&hpcd, 0x200);
+    //      HAL_PCDEx_SetTxFiFo(&hpcd, 0, 0x200);
+    // I tried allocating all the data RAM and it seemed to work although it is possible that it only works because the Rx FIFO has plenty of head room.
+    // This is important because of the DMA. The DMA is word aligned and I think is copies whole packets. A Tx FIFO of 0x174 words, 1488 bytes, is not a whole number of packets
+    // and I think this causes the DMA problem. The DMA didn't work when the Tx FIFO was 0x174 words and did when it was 0x180 words.
+    const auto rx_fifo_size = 0x200;
+    const auto ep0_tx_fifo_size = 0x80;
+    const auto ep1_tx_fifo_size = hs_usb_data_fifo_ram_size - rx_fifo_size - ep0_tx_fifo_size;
+    HAL_PCDEx_SetRxFiFo(&hpcd, rx_fifo_size);  // Rx FIFO size must be set first
+    HAL_PCDEx_SetTxFiFo(&hpcd, 0, ep0_tx_fifo_size);  // Tx FIFOs for IN endpoints must be set in order
+    HAL_PCDEx_SetTxFiFo(&hpcd, 1, ep1_tx_fifo_size);
 #endif
 
     // Set USB HS interrupt to the lowest priority
