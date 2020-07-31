@@ -580,6 +580,8 @@ void init() {
     //     10 locations must be reserved in the receive FIFO to receive SETUP packets on control endpoint. The core does not use these locations, which are reserved for SETUP packets, to write any other data.
     // This isn't shown the equation in the RM and it's possible/probably I don't understand.
     // But I found that without this magic number the OUT transaction timed out.
+    // It turns out I'm not the only person to struggle with this and the documentation comes in for some critism, see
+    //     https://github.com/IntergatedCircuits/USBDevice4Cube/issues/1#issuecomment-439653127
     const auto reserved_locations = 10;
 
     //     Device RxFIFO = (5 * number of control endpoints + 8) + ((largest USB packet used / 4) + 1 for status information) + (2 * number of OUT endpoints) + 1 for Global NAK
