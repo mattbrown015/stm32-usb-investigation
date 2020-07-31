@@ -112,3 +112,34 @@ Using a smaller MPS has some impact but perhaps not as much as I was expecting, 
     throughput MB/s 20.991197
     throughput Mbit/s 167.929579
     completed 10000 bulk in transfers
+
+### Impact of EP1 Tx FIFO Size
+
+I rearranged the data FIFO sizes to minimise the Rx FIFO and EP0 Tx FIFO, based on the recommendations, and thereby maximise the EP1 Tx FIFO.
+* Rx FIFO = 0x98 words
+* EP0 Tx FIFO = 0x20 words
+* EP1 Tx FIFO = 0x400 - 0x98 - 0x20 - 12 = 0x33c = 828 words
+
+828 words = 3312 bytes which allows for more than 6 packets in the Tx FIFO.
+
+The Tx FIFO size didn't seem to have any effect on this test.
+
+AFAICT, there is no advantage to having room for more than 2 packets in the Tx FIFO.  YMMV!
+
+I think this is because the Tx FIFO empty level (TXFELVL) is set so that the TXFE interrupt indicates that the IN endpoint Tx FIFO is half empty.  In other words, while the USB core is sending one packet the CPU can be filling the Tx FIFO with the next packet.  If the CPU had other things to do and couldn't always respond immediately to the TXFE interrupt it might help to have more packets in the Tx FIFO.
+
+#### Transfer Size 1024 bytes and MPS 512 bytes
+
+    perform 10000 bulk in transfers
+    duration_us 1362908 us
+    throughput MB/s 7.513346
+    throughput Mbit/s 60.106772
+    completed 10000 bulk in transfers
+
+#### Transfer Size 65536 bytes and MPS 512 bytes
+
+    perform 10000 bulk in transfers
+    duration_us 20095884 us
+    throughput MB/s 32.611653
+    throughput Mbit/s 260.893226
+    completed 10000 bulk in transfers
