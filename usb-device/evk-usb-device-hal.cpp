@@ -570,18 +570,54 @@ void init() {
     // 'USBPhyHw::init' and 'STM32Cube_FW_F7_V1.16.0/Projects/STM32F723E-Discovery/Applications/USB_Device/HID_Standalone/Src/usbd_conf.c'
     // that not all the words should be allocated here.
     // 'USBPhyHw::init' is a poor example because it thinks there is only '1.25 kbytes' of RAM available.
+
+#undef MAXIMISE_TXFIFO_SIZE  // For now I'm going to stick with FIFO configuration from the examples, perhaps if/when the endpoint configuration gets more complicated this will need revisiting.
+#if defined(MAXIMISE_TXFIFO_SIZE)
+    const auto hs_usb_data_fifo_ram_size_bytes = 4096;
+    const auto hs_usb_data_fifo_ram_size = hs_usb_data_fifo_ram_size_bytes / 4;  // I.e. 0x400 words
+
+    // From 32.11.3 FIFO RAM allocation...
+    //     10 locations must be reserved in the receive FIFO to receive SETUP packets on control endpoint. The core does not use these locations, which are reserved for SETUP packets, to write any other data.
+    // This is isn't shown the equation in the RM and it's possible/probably I don'tunderstand.
+    // But I found that without this magic number the OUT transaction timed out.
+    const auto reserved_locations = 10;
+
+    //     Device RxFIFO = (5 * number of control endpoints + 8) + ((largest USB packet used / 4) + 1 for status information) + (2 * number of OUT endpoints) + 1 for Global NAK
+    //                   = (5 * 2 + 8) + ((512 / 4) + 1) + (2 * 2) + 1
+    //                   = 152 = 0x98
+    const auto num_ctrl_eps = 2;  // I.e. EP0 In and OUT
+    const auto largest_packet = std::max(USB_OTG_MAX_EP0_SIZE, USB_OTG_HS_MAX_PACKET_SIZE);
+    const auto num_out_eps = 2;  // I.e. EP0 OUT and EP1 OUT
+    const auto rx_fifo_size = reserved_locations + (5 * num_ctrl_eps + 8) + ((largest_packet / 4) + 1) + (2 * num_out_eps) + 1;
+
+    //     Transmit FIFO RAM allocation: the minimum RAM space required for each IN endpoint Transmit FIFO is the maximum packet size for that particular IN endpoint.
+    //     More space allocated in the transmit IN endpoint FIFO results in better performance on the USB.
+    // In other words, 1 packet should be enough but I've gone for 2 to be safe. My test only does 1 EP0 IN transfer.
+    const auto ep0_in_mps = USB_OTG_MAX_EP0_SIZE;
+    const auto ep0_tx_fifo_size_bytes = ep0_in_mps * 2;
+    const auto ep0_tx_fifo_size = ep0_tx_fifo_size_bytes / 4;
+
+    // I can't ratify this with the documentation but the examples leave 12 words unallocated. I wonder if there's some confusion about the '10 reserved words'.
+    // I'm going to do the same, just in case...
+    const auto magic_free_unallocated_space = 12;
+
+    // Allocate the remaining data FIFO RAM to the EP1 Tx FIFO
+    const auto ep1_tx_fifo_size = hs_usb_data_fifo_ram_size - rx_fifo_size - ep0_tx_fifo_size - magic_free_unallocated_space;
+
+    HAL_PCDEx_SetRxFiFo(&hpcd, rx_fifo_size);  // Rx FIFO size must be set first
+    HAL_PCDEx_SetTxFiFo(&hpcd, 0, ep0_tx_fifo_size);  // Tx FIFOs for IN endpoints must be set in order
+    HAL_PCDEx_SetTxFiFo(&hpcd, 1, ep1_tx_fifo_size);
+#else
     // I've copied these numbers from 'usbd_conf.c'.
     // I think the rational is something like:
     //     Packets of varying sizes can be received so allocate an arbitrarily large RX FIFO i.e. half the available space.
-    //     If the application will result in more TX packets then, I guess, this could be reduced.
     //     Control packets on EP0 have a max size of 64 bytes so I think 0x80 means there's room for 8 TX control packets in the FIFO.
     //     TX packets on EP1 could be 512 bytes so 0x174 words (1488 bytes) means there's room for nearly 3 packets in the FIFO.
-    //     If the application will be sending  many bulk 512 byte packets I guess the TX FIFO size could be increased to make room for 3, or 4, packets.
-    // 'usbd_conf.c' seems to leave 12 words unallocated when I expected 11. Either there's something I don't understand or there's another word up for grabs.
-    // Stick with 'usbd_conf.c' until the example is working.
+    // 'usbd_conf.c' leaves 12 words unallocated i.e. 0x200 + 0x80 + 0x174 = 0x400 - 12. Several times I read something in the RM that I think explains this but then later change my mind!
     HAL_PCDEx_SetRxFiFo(&hpcd, 0x200);  // Rx FIFO size must be set first
     HAL_PCDEx_SetTxFiFo(&hpcd, 0, 0x80);  // Tx FIFOs for IN endpoints must be set in order
     HAL_PCDEx_SetTxFiFo(&hpcd, 1, 0x174);
+#endif
 
     // Set USB HS interrupt to the lowest priority
     HAL_NVIC_SetPriority(OTG_HS_IRQn, 5, 0);
