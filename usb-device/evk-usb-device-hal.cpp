@@ -578,7 +578,7 @@ void init() {
 
     // From 32.11.3 FIFO RAM allocation...
     //     10 locations must be reserved in the receive FIFO to receive SETUP packets on control endpoint. The core does not use these locations, which are reserved for SETUP packets, to write any other data.
-    // This is isn't shown the equation in the RM and it's possible/probably I don'tunderstand.
+    // This isn't shown the equation in the RM and it's possible/probably I don't understand.
     // But I found that without this magic number the OUT transaction timed out.
     const auto reserved_locations = 10;
 
