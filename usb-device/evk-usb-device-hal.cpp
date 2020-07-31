@@ -661,7 +661,15 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
 void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
     if (epnum == 0) {
         if (evk_usb_device_hal::vendor_request_receive_buffer_ready) {
-            if (evk_usb_device_hal::vendor_request_receive_buffer != std::array<uint8_t, 10>{"some data"}) {
+            const auto count = hpcd->OUT_ep[epnum].xfer_count;
+            const auto expected = std::array<uint8_t, 10>{"some data"};
+
+            if (count < expected.size()) {
+                MBED_ASSERT(false);
+            }
+
+            const auto equal = std::equal(begin(expected), end(expected), begin(evk_usb_device_hal::vendor_request_receive_buffer));
+            if (!equal) {
                 MBED_ASSERT(false);
             }
             evk_usb_device_hal::vendor_request_receive_buffer_ready = false;
