@@ -41,7 +41,7 @@ The throughput appeared to be around 3 Mbit/s out of a possible 12 Mbit/s.  This
     throughput Mbit/s 3.151949
     completed 10000 bulk in transfers
 
-## HS and Mbed OS USB
+### HS and Mbed OS USB
 
 After making a *fix* to Mbed OS, see https://github.com/mattbrown015/mbed-os, I got the test working using the USB HS port.
 
@@ -57,13 +57,13 @@ The throughput didn't appear to change.
 
 I tried switching on compiler optimisations but it didn't change the results.  The throughput is dominated by the USB not the CPU.
 
-## HS and USB HAL
+### HS and USB HAL
 
 It took a while to work out how to use the USB HAL but I got there in the end.
 
 Using the USB HAL made it possible to increase the bulk endpoint MPS to 512 bytes and perform transfers that are larger than one packet.
 
-### Transfer Size 512 bytes and MPS 512 bytes
+#### Transfer Size 512 bytes and MPS 512 bytes
 
 With the MPS as 512 bytes and the transfer size 512 bytes, i.e. 1 packet, the throughput increased to around 30 Mbit/s out of a possible 480 Mbit/s.  This is definitely disappointing but it does confirm that it is USB HS (if the test can be trusted).
 
@@ -73,7 +73,7 @@ With the MPS as 512 bytes and the transfer size 512 bytes, i.e. 1 packet, the th
     throughput Mbit/s 29.985315
     completed 10000 bulk in transfers
 
-### Transfer Size 1024 bytes and MPS 512 bytes
+#### Transfer Size 1024 bytes and MPS 512 bytes
 
 Increasing the transfer size to 1024 bytes makes a significant difference to the throughput, up to 50 Mbit/s from 30 Mbit/s.
 
@@ -93,7 +93,7 @@ I removed the test of the bulk IN data in 'usb-host' and this increased the thro
     throughput Mbit/s 60.687011
     completed 10000 bulk in transfers
 
-### Transfer Size 65536 bytes and MPS 512 bytes
+#### Transfer Size 65536 bytes and MPS 512 bytes
 
 Increasing the transfer size has a significant impact.  The throughput appears to be 270 Mbit/s when the transfer size is 65536 bytes.  I'd be happy if this throughput was maintained when the device also has to gather the data and the host has to do something with it.
 
@@ -103,7 +103,7 @@ Increasing the transfer size has a significant impact.  The throughput appears t
     throughput Mbit/s 271.165907
     completed 10000 bulk in transfers
 
-### Transfer Size 65536 bytes and MPS 64 bytes
+#### Transfer Size 65536 bytes and MPS 64 bytes
 
 Using a smaller MPS has some impact but perhaps not as much as I was expecting, 170 Mbit/s is still none too shabby!
 
@@ -113,7 +113,7 @@ Using a smaller MPS has some impact but perhaps not as much as I was expecting, 
     throughput Mbit/s 167.929579
     completed 10000 bulk in transfers
 
-### Impact of EP1 Tx FIFO Size
+#### Impact of EP1 Tx FIFO Size
 
 I rearranged the data FIFO sizes to minimise the Rx FIFO and EP0 Tx FIFO, based on the recommendations, and thereby maximise the EP1 Tx FIFO.
 * Rx FIFO = 0x98 words
@@ -128,7 +128,7 @@ AFAICT, there is no advantage to having room for more than 2 packets in the Tx F
 
 I think this is because the Tx FIFO empty level (TXFELVL) is set so that the TXFE interrupt indicates that the IN endpoint Tx FIFO is half empty.  In other words, while the USB core is sending one packet the CPU can be filling the Tx FIFO with the next packet.  If the CPU had other things to do and couldn't always respond immediately to the TXFE interrupt it might help to have more packets in the Tx FIFO.
 
-#### Transfer Size 1024 bytes and MPS 512 bytes
+##### Transfer Size 1024 bytes and MPS 512 bytes
 
     perform 10000 bulk in transfers
     duration_us 1362908 us
@@ -136,7 +136,7 @@ I think this is because the Tx FIFO empty level (TXFELVL) is set so that the TXF
     throughput Mbit/s 60.106772
     completed 10000 bulk in transfers
 
-#### Transfer Size 65536 bytes and MPS 512 bytes
+##### Transfer Size 65536 bytes and MPS 512 bytes
 
     perform 10000 bulk in transfers
     duration_us 20095884 us
