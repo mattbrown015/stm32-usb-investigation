@@ -228,7 +228,7 @@ PCD_HandleTypeDef hpcd = {
         .speed = PCD_SPEED_HIGH,
         // Disable embedded DMA initially although need to find out how to use DMA.
         // HAL_PCD_Init sets this to DISABLE depending on the value of OTG_CID i.e. it checks if this is a HS device
-        .dma_enable = DISABLE,
+        .dma_enable = ENABLE,
         .ep0_mps = USB_OTG_MAX_EP0_SIZE,
         .phy_itface = USB_OTG_HS_EMBEDDED_PHY,
         .Sof_enable = DISABLE,
@@ -255,8 +255,11 @@ PCD_HandleTypeDef hpcd = {
 
 device_state_t device_state = device_state_t::default_;
 
-std::array<uint8_t, 10> vendor_request_receive_buffer{ 0x00 };  // usb-host does a /test/ control out request with a payload of
+// usb-host does a /test/ control out request with a payload of "some data"
+// AFAICT, the DMA engine writes a whole packet to the destination buffer even if it is a short transfer.
+std::array<uint8_t, USB_OTG_MAX_EP0_SIZE> vendor_request_receive_buffer{ 0x00 };
 bool vendor_request_receive_buffer_ready = false;
+const auto vendor_request_receive_expected = std::array<uint8_t, 10>{"some data"};
 
 std::array<uint8_t, usb_device::bulk_transfer_length> ep1_transmit_buffer;
 std::array<uint8_t, usb_device::bulk_transfer_length> ep1_receive_buffer;
@@ -448,7 +451,7 @@ void vendor_device_request(PCD_HandleTypeDef *const hpcd, const setup_data &setu
             if (setup_data.bmRequestType.direction == direction_t::host_to_device) {
                 vendor_request_receive_buffer.fill(0);
 
-                const auto len = std::min<uint32_t>(setup_data.wLength, vendor_request_receive_buffer.size());
+                const auto len = std::min<uint32_t>(setup_data.wLength, vendor_request_receive_expected.size());
                 HAL_PCD_EP_Receive(hpcd, ep0_in_ep_addr, vendor_request_receive_buffer.data(), len);
                 HAL_PCD_EP_Transmit(hpcd, ep0_out_ep_addr, nullptr, 0);
 
@@ -624,10 +627,15 @@ void init() {
     //      HAL_PCDEx_SetTxFiFo(&hpcd, 0, 0x200);
     // I tried allocating all the data RAM and it seemed to work although it is possible that it only works because the Rx FIFO has plenty of head room.
     // This is important because of the DMA. The DMA is word aligned and I think is copies whole packets. A Tx FIFO of 0x174 words, 1488 bytes, is not a whole number of packets
-    // and I think this causes the DMA problem. The DMA didn't work when the Tx FIFO was 0x174 words and did when it was 0x180 words.
+    // and I think this causes the DMA problem. The DMA didn't work when the Tx FIFO was 0x174 words and did when it was 0x100 words.
+    // I've been around a few houses and now think the Tx FIFO has to be an integer number of packets, i.e. it worked when I tried 0x100 and 0x200 and not with 0x180.
+    // I suspect this still isn't the end of the story.
     const auto rx_fifo_size = 0x200;
     const auto ep0_tx_fifo_size = 0x80;
-    const auto ep1_tx_fifo_size = hs_usb_data_fifo_ram_size - rx_fifo_size - ep0_tx_fifo_size;
+    MBED_UNUSED const auto available_for_ep1_tx_fifo = hs_usb_data_fifo_ram_size - rx_fifo_size - ep0_tx_fifo_size;
+    const auto ep1_tx_fifo_size = (USB_OTG_HS_MAX_PACKET_SIZE * 2) / 4;
+    static_assert(ep1_tx_fifo_size <= available_for_ep1_tx_fifo, "No enough space available for the EP1 Tx FIFO");
+
     HAL_PCDEx_SetRxFiFo(&hpcd, rx_fifo_size);  // Rx FIFO size must be set first
     HAL_PCDEx_SetTxFiFo(&hpcd, 0, ep0_tx_fifo_size);  // Tx FIFOs for IN endpoints must be set in order
     HAL_PCDEx_SetTxFiFo(&hpcd, 1, ep1_tx_fifo_size);
@@ -662,13 +670,12 @@ void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
     if (epnum == 0) {
         if (evk_usb_device_hal::vendor_request_receive_buffer_ready) {
             const auto count = hpcd->OUT_ep[epnum].xfer_count;
-            const auto expected = std::array<uint8_t, 10>{"some data"};
 
-            if (count < expected.size()) {
+            if (count < evk_usb_device_hal::vendor_request_receive_expected.size()) {
                 MBED_ASSERT(false);
             }
 
-            const auto equal = std::equal(begin(expected), end(expected), begin(evk_usb_device_hal::vendor_request_receive_buffer));
+            const auto equal = std::equal(begin(evk_usb_device_hal::vendor_request_receive_expected), end(evk_usb_device_hal::vendor_request_receive_expected), begin(evk_usb_device_hal::vendor_request_receive_buffer));
             if (!equal) {
                 MBED_ASSERT(false);
             }
