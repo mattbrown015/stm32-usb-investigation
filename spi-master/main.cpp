@@ -102,8 +102,6 @@ void dma_init() {
 }
 
 void spi_tx() {
-    using namespace std::chrono_literals;
-
     spi_init();
     dma_init();
 
