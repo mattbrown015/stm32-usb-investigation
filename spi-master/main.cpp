@@ -1,5 +1,6 @@
 #include "show-running.h"
 
+#include <drivers/InterruptIn.h>
 #include <platform/mbed_assert.h>
 #include <rtos/ThisThread.h>
 #include <rtos/Thread.h>
@@ -57,7 +58,8 @@ DMA_HandleTypeDef hdma = {
         .MemInc = DMA_MINC_ENABLE,
         .PeriphDataAlignment = DMA_PDATAALIGN_BYTE,
         .MemDataAlignment = DMA_MDATAALIGN_BYTE,
-        .Mode = DMA_NORMAL,
+        // Circular transfer will keep going until it is stopped from software.
+        .Mode = DMA_CIRCULAR,
         .Priority = DMA_PRIORITY_LOW,
         .FIFOMode = DMA_FIFOMODE_DISABLE,
         .FIFOThreshold = DMA_FIFO_THRESHOLD_FULL,
@@ -84,7 +86,15 @@ const size_t stack_size = OS_STACK_SIZE; // /Normal/ stack size
 MBED_ALIGN(8) unsigned char stack[stack_size];
 rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "spi tx");
 
-const uint32_t tx_complete_flag = 1 << 0;
+const uint32_t toggle_tx_flag = 1 << 0;
+
+mbed::InterruptIn sw_user(USER_BUTTON);
+
+void sw_user_rise() {
+    MBED_UNUSED const auto result = thread.flags_set(toggle_tx_flag);
+    MBED_ASSERT(!(result & osFlagsError));
+
+}
 
 void spi_init() {
     MBED_UNUSED const auto status = HAL_SPI_Init(&hspi);
@@ -101,20 +111,39 @@ void dma_init() {
     HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
 }
 
+void start_circular_dma() {
+    MBED_UNUSED const auto status = HAL_SPI_Transmit_DMA(&hspi, &tx_buffer[0], sizeof(tx_buffer));
+    MBED_ASSERT(status == HAL_OK);
+}
+
+void stop_circular_dma() {
+    MBED_UNUSED const auto status = HAL_SPI_DMAStop(&hspi);
+    MBED_ASSERT(status == HAL_OK);
+}
+
+void wait_for_button_press() {
+    MBED_UNUSED const auto status = rtos::ThisThread::flags_wait_all(toggle_tx_flag);
+    MBED_ASSERT(!(status & osFlagsError));
+}
+
 void spi_tx() {
+    sw_user.rise(sw_user_rise);
+
     spi_init();
     dma_init();
 
     while (1) {
         LL_GPIO_ResetOutputPin(GPIOD, LL_GPIO_PIN_14);
 
-        MBED_UNUSED const auto status = HAL_SPI_Transmit_DMA(&hspi, &tx_buffer[0], sizeof(tx_buffer));
-        MBED_ASSERT(status == HAL_OK);
+        start_circular_dma();
 
-        MBED_UNUSED const auto result = rtos::ThisThread::flags_wait_all(tx_complete_flag);
-        MBED_ASSERT(!(result & osFlagsError));
+        wait_for_button_press();
+
+        stop_circular_dma();
 
         LL_GPIO_SetOutputPin(GPIOD, LL_GPIO_PIN_14);
+
+        wait_for_button_press();
     }
 }
 
@@ -160,12 +189,6 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
     LL_GPIO_SetPinSpeed(GPIOA, LL_GPIO_PIN_7, LL_GPIO_SPEED_FREQ_VERY_HIGH);
     LL_GPIO_SetPinOutputType(GPIOA, LL_GPIO_PIN_7, LL_GPIO_OUTPUT_PUSHPULL);
     LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_7, LL_GPIO_PULL_NO);
-}
-
-// Override /weak/ implementation provided by startup_stm32f767xx.S.
-extern "C" void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
-    MBED_UNUSED const auto result = thread.flags_set(tx_complete_flag);
-    MBED_ASSERT(!(result & osFlagsError));
 }
 
 // Override /weak/ implementation provided by startup_stm32f767xx.S.
