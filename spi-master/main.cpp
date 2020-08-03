@@ -50,7 +50,7 @@ uint8_t tx_buffer[] = { 's', 'p', 'i', ' ' };
 
 const size_t stack_size = OS_STACK_SIZE; // /Normal/ stack size
 MBED_ALIGN(8) unsigned char stack[stack_size];
-rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "spi txrx");
+rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "spi tx");
 
 
 void spi_init() {
@@ -58,7 +58,7 @@ void spi_init() {
     MBED_ASSERT(status == HAL_OK);
 }
 
-void spi_txrx() {
+void spi_tx() {
     using namespace std::chrono_literals;
 
     spi_init();
@@ -75,8 +75,8 @@ void spi_txrx() {
     }
 }
 
-void spi_txrx_init() {
-    MBED_UNUSED const auto status = thread.start(spi_txrx);
+void spi_tx_init() {
+    MBED_UNUSED const auto status = thread.start(spi_tx);
     MBED_ASSERT(status == osOK);
 }
 
@@ -124,7 +124,7 @@ int main() {
 
     show_running::init();
 
-    spi_txrx_init();
+    spi_tx_init();
 
     rtos::ThisThread::sleep_for(rtos::Kernel::wait_for_u32_forever);
 }
