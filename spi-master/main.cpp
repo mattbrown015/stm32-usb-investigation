@@ -20,6 +20,8 @@ SPI_HandleTypeDef hspi = {
         .CLKPolarity = SPI_POLARITY_LOW,
         .CLKPhase = SPI_PHASE_1EDGE,
         .NSS = SPI_NSS_HARD_OUTPUT,
+        // SPI1 uses APB2 clock. From system_clock.c "APB2CLK (MHz) | 108".
+        // Hence SCLK = 108/16 = 6.75 MHz. I confirmed this using the scope.
         .BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16,
         .FirstBit = SPI_FIRSTBIT_MSB,
         .TIMode = SPI_TIMODE_DISABLE,
