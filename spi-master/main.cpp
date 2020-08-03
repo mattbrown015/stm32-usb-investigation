@@ -46,37 +46,77 @@ SPI_HandleTypeDef hspi = {
     .ErrorCode = HAL_SPI_ERROR_NONE
 };
 
+DMA_HandleTypeDef hdma = {
+    .Instance = DMA2_Stream3,
+    .Init = {
+        .Channel = DMA_CHANNEL_3,
+        .Direction = DMA_MEMORY_TO_PERIPH,
+        .PeriphInc = DMA_PINC_DISABLE,
+        .MemInc = DMA_MINC_ENABLE,
+        .PeriphDataAlignment = DMA_PDATAALIGN_BYTE,
+        .MemDataAlignment = DMA_MDATAALIGN_BYTE,
+        .Mode = DMA_NORMAL,
+        .Priority = DMA_PRIORITY_LOW,
+        .FIFOMode = DMA_FIFOMODE_DISABLE,
+        .FIFOThreshold = DMA_FIFO_THRESHOLD_FULL,
+        .MemBurst = DMA_MBURST_INC4,
+        .PeriphBurst = DMA_PBURST_INC4
+    },
+    .Lock = HAL_UNLOCKED,
+    .State = HAL_DMA_STATE_RESET,
+    .Parent = nullptr,
+    .XferCpltCallback = nullptr,
+    .XferHalfCpltCallback = nullptr,
+    .XferM1CpltCallback = nullptr,
+    .XferM1HalfCpltCallback = nullptr,
+    .XferErrorCallback = nullptr,
+    .XferAbortCallback = nullptr,
+    .ErrorCode = HAL_DMA_ERROR_NONE,
+    .StreamBaseAddress = 0,
+    .StreamIndex = 0
+};
+
 uint8_t tx_buffer[] = { 's', 'p', 'i', ' ' };
 
 const size_t stack_size = OS_STACK_SIZE; // /Normal/ stack size
 MBED_ALIGN(8) unsigned char stack[stack_size];
 rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "spi tx");
 
+const uint32_t tx_complete_flag = 1 << 0;
 
 void spi_init() {
     MBED_UNUSED const auto status = HAL_SPI_Init(&hspi);
     MBED_ASSERT(status == HAL_OK);
 }
 
+void dma_init() {
+    __HAL_RCC_DMA2_CLK_ENABLE();
+
+    MBED_UNUSED const auto status = HAL_DMA_Init(&hdma);
+    MBED_ASSERT(status == HAL_OK);
+
+    __HAL_LINKDMA(&hspi, hdmatx, hdma);
+
+    HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 1, 1);
+    HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
+}
+
 void spi_tx() {
     using namespace std::chrono_literals;
 
     spi_init();
+    dma_init();
 
     while (1) {
         LL_GPIO_ResetOutputPin(GPIOD, LL_GPIO_PIN_14);
 
-        MBED_UNUSED const auto status = HAL_SPI_Transmit(&hspi, &tx_buffer[0], sizeof(tx_buffer), 1 /*ms*/);
+        MBED_UNUSED const auto status = HAL_SPI_Transmit_DMA(&hspi, &tx_buffer[0], sizeof(tx_buffer));
         MBED_ASSERT(status == HAL_OK);
 
-        LL_GPIO_SetOutputPin(GPIOD, LL_GPIO_PIN_14);
+        MBED_UNUSED const auto result = rtos::ThisThread::flags_wait_all(tx_complete_flag);
+        MBED_ASSERT(!(result & osFlagsError));
 
-        // I tried to remove this so the SPI transactions would come back-to-back but
-        // 'HAL_SPI_Transmit' returned 'HAL_ERROR'. Despite 'HAL_SPI_Transmit' being
-        // a blocking function I suspect the SPI peripheral needs some time to allow
-        // the GPIOs to settle or something. Having said that, I tried various
-        // combinartions of 'wait_us(100)' and 'ThisThread::yield' without success.
-        rtos::ThisThread::sleep_for(1ms);
+        LL_GPIO_SetOutputPin(GPIOD, LL_GPIO_PIN_14);
     }
 }
 
@@ -122,6 +162,17 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
     LL_GPIO_SetPinSpeed(GPIOA, LL_GPIO_PIN_7, LL_GPIO_SPEED_FREQ_VERY_HIGH);
     LL_GPIO_SetPinOutputType(GPIOA, LL_GPIO_PIN_7, LL_GPIO_OUTPUT_PUSHPULL);
     LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_7, LL_GPIO_PULL_NO);
+}
+
+// Override /weak/ implementation provided by startup_stm32f767xx.S.
+extern "C" void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
+    MBED_UNUSED const auto result = thread.flags_set(tx_complete_flag);
+    MBED_ASSERT(!(result & osFlagsError));
+}
+
+// Override /weak/ implementation provided by startup_stm32f767xx.S.
+extern "C" void DMA2_Stream3_IRQHandler() {
+    HAL_DMA_IRQHandler(hspi.hdmatx);
 }
 
 int main() {

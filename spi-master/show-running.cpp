@@ -14,7 +14,7 @@ mbed::DigitalOut green_led(LED1);
 
 const size_t stack_size = 512; // Arbitrarily /small/ stack
 MBED_ALIGN(8) unsigned char stack[stack_size];
-rtos::Thread thread(osPriorityLow, sizeof(stack), stack, "show_running");
+rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "show_running");
 
 void show_running() {
     using namespace std::chrono_literals;
