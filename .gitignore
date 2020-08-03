@@ -1,5 +1,7 @@
 *.pyc
 *.swp
+spi-master/BUILD/
+spi-master/mbed-os/
 usb-device/BUILD/
 usb-device/mbed-os/
 usb-host/usb-host.exe
