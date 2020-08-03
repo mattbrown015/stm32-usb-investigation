@@ -43,7 +43,7 @@ SPI_HandleTypeDef hspi = {
     .hdmarx = nullptr,
     .Lock = HAL_UNLOCKED,
     .State = HAL_SPI_STATE_RESET,
-    .ErrorCode = 0
+    .ErrorCode = HAL_SPI_ERROR_NONE
 };
 
 uint8_t tx_buffer[] = { 's', 'p', 'i', ' ' };
