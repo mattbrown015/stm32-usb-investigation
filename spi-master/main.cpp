@@ -71,6 +71,11 @@ void spi_tx() {
 
         LL_GPIO_SetOutputPin(GPIOD, LL_GPIO_PIN_14);
 
+        // I tried to remove this so the SPI transactions would come back-to-back but
+        // 'HAL_SPI_Transmit' returned 'HAL_ERROR'. Despite 'HAL_SPI_Transmit' being
+        // a blocking function I suspect the SPI peripheral needs some time to allow
+        // the GPIOs to settle or something. Having said that, I tried various
+        // combinartions of 'wait_us(100)' and 'ThisThread::yield' without success.
         rtos::ThisThread::sleep_for(1ms);
     }
 }
