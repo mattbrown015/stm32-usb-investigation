@@ -11,6 +11,8 @@
 namespace
 {
 
+extern DMA_HandleTypeDef hdma;
+
 SPI_HandleTypeDef hspi = {
     .Instance = SPI1,
     .Init = {
@@ -39,7 +41,7 @@ SPI_HandleTypeDef hspi = {
     .CRCSize = 0,
     .RxISR = nullptr,
     .TxISR = nullptr,
-    .hdmatx = nullptr,
+    .hdmatx = &hdma,
     .hdmarx = nullptr,
     .Lock = HAL_UNLOCKED,
     .State = HAL_SPI_STATE_RESET,
@@ -64,7 +66,7 @@ DMA_HandleTypeDef hdma = {
     },
     .Lock = HAL_UNLOCKED,
     .State = HAL_DMA_STATE_RESET,
-    .Parent = nullptr,
+    .Parent = &hspi,
     .XferCpltCallback = nullptr,
     .XferHalfCpltCallback = nullptr,
     .XferM1CpltCallback = nullptr,
@@ -94,8 +96,6 @@ void dma_init() {
 
     MBED_UNUSED const auto status = HAL_DMA_Init(&hdma);
     MBED_ASSERT(status == HAL_OK);
-
-    __HAL_LINKDMA(&hspi, hdmatx, hdma);
 
     HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 1, 1);
     HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
@@ -172,7 +172,7 @@ extern "C" void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
 
 // Override /weak/ implementation provided by startup_stm32f767xx.S.
 extern "C" void DMA2_Stream3_IRQHandler() {
-    HAL_DMA_IRQHandler(hspi.hdmatx);
+    HAL_DMA_IRQHandler(&hdma);
 }
 
 int main() {
