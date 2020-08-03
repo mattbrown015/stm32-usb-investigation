@@ -82,7 +82,7 @@ void spi_txrx_init() {
 
 }
 
-// Override /weal/ implementation provided by stm32f7xx_hal_spi.c.
+// Override /weak/ implementation provided by stm32f7xx_hal_spi.c.
 // The clocks and IO could just be initialised before calling 'HAL_SPI_Init'
 // but this method is a common theme in all HAL drivers so I'm going to
 // give it a go here.
