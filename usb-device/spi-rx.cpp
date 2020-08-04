@@ -6,6 +6,8 @@
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_gpio.h>
 
+#include <climits>
+
 namespace spi_rx
 {
 
@@ -87,6 +89,24 @@ const uint32_t rx_complete_flag = 1 << 0;
 
 uint8_t rx_buffer[256] = { 0 };
 
+// 'spi-master' repeatedly transmits 4 characters, 's', 'p', 'i' and ' '.
+// There is no synchronisation so these will end up in the SPI rx buffer with an unknown bit offset.
+// The easiest way to work out if the characters are in the rx buffer is to treat them as a word.
+// As it happens I know "{ 's', 'p', 'i', ' ' }" interpretted as uint32_t is 0x20697073 on this platform.
+// But, I couldn't resist over complicating things and using the union hack to calculate it
+// as well as checking we are little endian!
+#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+# error
+#endif
+const union byte_array_to_word_hack {
+    const uint8_t bytes[4];
+    const uint32_t word;
+} expected = {
+    .bytes  = { 's', 'p', 'i', ' ' }
+};
+const auto num_bits = sizeof(expected) * CHAR_BIT;
+std::array<uint32_t, num_bits> possible_rx_patterns;
+
 void spi_init() {
     MBED_UNUSED const auto status = HAL_SPI_Init(&hspi);
     MBED_ASSERT(status == HAL_OK);
@@ -114,6 +134,28 @@ void led_init() {
     LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_7);
 }
 
+uint32_t rotate_word(const uint32_t word, const uint32_t shift) {
+    return word << shift | word >> (num_bits - shift);
+}
+
+void possible_rx_patterns_init() {
+    for (auto shift = 0u; shift < num_bits; ++shift) {
+        possible_rx_patterns[shift] = rotate_word(expected.word, shift);
+    }
+}
+
+bool find_expected_rx_pattern() {
+    // Only checking the first word, it's enough for now.
+    const uint32_t rx_pattern = *reinterpret_cast<uint32_t*>(&rx_buffer[0]);
+    for (auto shift = 0u; shift < num_bits; ++shift) {
+        if (rx_pattern == possible_rx_patterns[shift]) {
+            return true;
+        }
+    }
+    printf("rx_pattern unrecognised 0x%x\n", rx_pattern);
+    return false;
+}
+
 void spi_rx() {
     using namespace std::chrono_literals;
 
@@ -121,12 +163,17 @@ void spi_rx() {
     dma_init();
     led_init();
 
+    possible_rx_patterns_init();
+
     while (1) {
         MBED_UNUSED const auto status = HAL_SPI_Receive_DMA(&hspi, &rx_buffer[0], sizeof(rx_buffer));
         MBED_ASSERT(status == HAL_OK);
 
         MBED_UNUSED const auto result = rtos::ThisThread::flags_wait_all(rx_complete_flag);
         MBED_ASSERT(!(result & osFlagsError));
+
+        if (!find_expected_rx_pattern()) {
+        }
 
         LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_7);
 
