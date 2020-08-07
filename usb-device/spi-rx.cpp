@@ -88,7 +88,7 @@ rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "spi_rx");
 
 const uint32_t rx_complete_flag = 1 << 0;
 
-const size_t num_buffers = 2;
+const size_t num_buffers = 4;
 uint8_t rx_buffer[num_buffers][512] = { { 0 } };
 
 // 'spi-master' repeatedly transmits 4 characters, 's', 'p', 'i' and ' '.
@@ -179,8 +179,9 @@ void spi_rx() {
         // Weak initial demo of doing something with the buffers.
         // 'sleep_for' below means I can see the LED flashing but it also means the loop doesn't run
         // for ever buffer complete.
-        find_expected_rx_pattern(0);
-        find_expected_rx_pattern(1);
+        for (auto i = 0u; i < num_buffers; ++i) {
+            find_expected_rx_pattern(i);
+        }
 
         LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_7);
 
@@ -245,11 +246,27 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
 extern "C" void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
     MBED_UNUSED const auto result = spi_rx::thread.flags_set(spi_rx::rx_complete_flag);
     MBED_ASSERT(!(result & osFlagsError));
+
+    MBED_ASSERT((spi_rx::hdma.Instance->CR & DMA_SxCR_CT) == DMA_SxCR_CT);
+    uint32_t rx_buffer0_addr = reinterpret_cast<uint32_t>(&spi_rx::rx_buffer[0][0]);
+    uint32_t rx_buffer2_addr = reinterpret_cast<uint32_t>(&spi_rx::rx_buffer[2][0]);
+    spi_rx::hdma.Instance->M0AR
+        = spi_rx::hdma.Instance->M0AR == rx_buffer0_addr
+        ? rx_buffer2_addr
+        : rx_buffer0_addr;
 }
 
 extern "C" void HAL_SPI_M1RxCpltCallback(SPI_HandleTypeDef *hspi) {
     MBED_UNUSED const auto result = spi_rx::thread.flags_set(spi_rx::rx_complete_flag);
     MBED_ASSERT(!(result & osFlagsError));
+
+    MBED_ASSERT((spi_rx::hdma.Instance->CR & DMA_SxCR_CT) == 0);
+    uint32_t rx_buffer1_addr = reinterpret_cast<uint32_t>(&spi_rx::rx_buffer[1][0]);
+    uint32_t rx_buffer3_addr = reinterpret_cast<uint32_t>(&spi_rx::rx_buffer[3][0]);
+    spi_rx::hdma.Instance->M1AR
+        = spi_rx::hdma.Instance->M1AR == rx_buffer1_addr
+        ? rx_buffer3_addr
+        : rx_buffer1_addr;
 }
 
 // Override /weak/ implementation provided by startup_stm32f723xx.s.
