@@ -88,7 +88,7 @@ rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "spi_rx");
 
 const uint32_t rx_complete_flag = 1 << 0;
 
-uint8_t rx_buffer[256] = { 0 };
+uint8_t rx_buffer[512] = { 0 };
 
 // 'spi-master' repeatedly transmits 4 characters, 's', 'p', 'i' and ' '.
 // There is no synchronisation so these will end up in the SPI rx buffer with an unknown bit offset.
