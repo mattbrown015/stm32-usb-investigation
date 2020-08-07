@@ -88,7 +88,8 @@ rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "spi_rx");
 
 const uint32_t rx_complete_flag = 1 << 0;
 
-uint8_t rx_buffer[512] = { 0 };
+const size_t num_buffers = 2;
+uint8_t rx_buffer[num_buffers][512] = { { 0 } };
 
 // 'spi-master' repeatedly transmits 4 characters, 's', 'p', 'i' and ' '.
 // There is no synchronisation so these will end up in the SPI rx buffer with an unknown bit offset.
@@ -145,15 +146,15 @@ void possible_rx_patterns_init() {
     }
 }
 
-bool find_expected_rx_pattern() {
+bool find_expected_rx_pattern(const size_t buffer_index) {
     // Only checking the first word, it's enough for now.
-    const uint32_t rx_pattern = *reinterpret_cast<uint32_t*>(&rx_buffer[0]);
+    const uint32_t rx_pattern = *reinterpret_cast<uint32_t*>(&rx_buffer[buffer_index][0]);
     for (auto shift = 0u; shift < num_bits; ++shift) {
         if (rx_pattern == possible_rx_patterns[shift]) {
             return true;
         }
     }
-    printf("rx_pattern unrecognised 0x%" PRIx32 "\n", rx_pattern);
+    printf("rx_pattern unrecognised 0x%" PRIx32 " buffer_index %u\n", rx_pattern, buffer_index);
     return false;
 }
 
@@ -166,15 +167,20 @@ void spi_rx() {
 
     possible_rx_patterns_init();
 
-    while (1) {
-        MBED_UNUSED const auto status = HAL_SPI_Receive_DMA(&hspi, &rx_buffer[0], sizeof(rx_buffer));
-        MBED_ASSERT(status == HAL_OK);
+    // When the double-buffer mode is enabled, the circular mode is automatically enabled
+    // which means it runs continuously until stopped by the software.
+    MBED_UNUSED const auto status = HAL_SPI_Receive_MultiBufferDMA(&hspi, &rx_buffer[0][0], &rx_buffer[1][0], sizeof(rx_buffer[0]));
+    MBED_ASSERT(status == HAL_OK);
 
-        MBED_UNUSED const auto result = rtos::ThisThread::flags_wait_all(rx_complete_flag);
+    while (1) {
+        const auto result = rtos::ThisThread::flags_wait_all(rx_complete_flag);
         MBED_ASSERT(!(result & osFlagsError));
 
-        if (!find_expected_rx_pattern()) {
-        }
+        // Weak initial demo of doing something with the buffers.
+        // 'sleep_for' below means I can see the LED flashing but it also means the loop doesn't run
+        // for ever buffer complete.
+        find_expected_rx_pattern(0);
+        find_expected_rx_pattern(1);
 
         LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_7);
 
@@ -237,6 +243,11 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
 
 // Override /weak/ implementation provided by stm32f7xx_hal_spi.c.
 extern "C" void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
+    MBED_UNUSED const auto result = spi_rx::thread.flags_set(spi_rx::rx_complete_flag);
+    MBED_ASSERT(!(result & osFlagsError));
+}
+
+extern "C" void HAL_SPI_M1RxCpltCallback(SPI_HandleTypeDef *hspi) {
     MBED_UNUSED const auto result = spi_rx::thread.flags_set(spi_rx::rx_complete_flag);
     MBED_ASSERT(!(result & osFlagsError));
 }
