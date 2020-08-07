@@ -6,6 +6,7 @@
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_gpio.h>
 
+#include <cinttypes>
 #include <climits>
 
 namespace spi_rx
@@ -152,7 +153,7 @@ bool find_expected_rx_pattern() {
             return true;
         }
     }
-    printf("rx_pattern unrecognised 0x%x\n", rx_pattern);
+    printf("rx_pattern unrecognised 0x%" PRIx32 "\n", rx_pattern);
     return false;
 }
 
