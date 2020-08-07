@@ -277,7 +277,7 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
         return false;
     } else {
         if (transferred != length) {
-            printf("Number of bytes actually transferred not the same as the requested length, transferred %d, length %d", transferred, length);
+            printf("Number of bytes actually transferred not the same as the requested length, transferred %d, length %d\n", transferred, length);
             return false;
         }
 #if defined(CHECK_BULK_IN_DATA)
@@ -339,7 +339,7 @@ bool bulk_transfer_out(libusb_device_handle *const device_handle) {
         return false;
     } else {
         if (transferred != length) {
-            printf("Number of bytes actually transferred not the same as the requested length, transferred %d, length %d", transferred, length);
+            printf("Number of bytes actually transferred not the same as the requested length, transferred %d, length %d\n", transferred, length);
             return false;
         }
         return true;
