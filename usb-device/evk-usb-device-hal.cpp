@@ -655,7 +655,7 @@ extern "C" void OTG_HS_IRQHandler() {
 
 // This is the first callback called after calling 'HAL_PCD_Start' and connecting the device.
 // This is a significantly simplified version of 'HAL_PCD_ResetCallback' from 'usbd_conf.c'.
-// A USB device must always have EP0 open for In and OUT transactions.
+// A USB device must always have EP0 open for IN and OUT transactions.
 void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
     evk_usb_device_hal::device_state = evk_usb_device_hal::device_state_t::default_;
 
