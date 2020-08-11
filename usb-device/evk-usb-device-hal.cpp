@@ -656,7 +656,7 @@ extern "C" void OTG_HS_IRQHandler() {
 // This is the first callback called after calling 'HAL_PCD_Start' and connecting the device.
 // This is a significantly simplified version of 'HAL_PCD_ResetCallback' from 'usbd_conf.c'.
 // A USB device must always have EP0 open for IN and OUT transactions.
-void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
+extern "C" void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
     evk_usb_device_hal::device_state = evk_usb_device_hal::device_state_t::default_;
 
     HAL_PCD_EP_Open(hpcd, evk_usb_device_hal::ep0_out_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
@@ -664,7 +664,7 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
     HAL_PCD_EP_Open(hpcd, evk_usb_device_hal::ep0_in_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
 }
 
-void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
+extern "C" void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
     if (epnum == 0) {
         if (evk_usb_device_hal::vendor_request_receive_buffer_ready) {
             const auto count = hpcd->OUT_ep[epnum].xfer_count;
@@ -687,7 +687,7 @@ void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
     }
 }
 
-void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
+extern "C" void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
     // Simplified version of 'USBD_LL_DataInStage' in
     // 'STM32Cube_FW_F7_V1.16.0/Projects/STM32F723E-Discovery/Applications/USB_Device/HID_Standalone/Src/usbd_core.c'.
     if (epnum == 0) {
@@ -704,6 +704,6 @@ void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
 // 'HAL_PCD_IRQHandler' decodes setup packets, puts the payload in 'hpcd->Setup'
 // and calls 'HAL_PCD_SetupStageCallback'.
 // The packet is described in the USB Spec 9.3 USB Device Requests.
-void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd) {
+extern "C" void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd) {
     evk_usb_device_hal::setup_stage_callback(hpcd);
 }
