@@ -704,7 +704,6 @@ void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
 // 'HAL_PCD_IRQHandler' decodes setup packets, puts the payload in 'hpcd->Setup'
 // and calls 'HAL_PCD_SetupStageCallback'.
 // The packet is described in the USB Spec 9.3 USB Device Requests.
-void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
-{
+void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd) {
     evk_usb_device_hal::setup_stage_callback(hpcd);
 }
