@@ -646,44 +646,42 @@ void init() {
     HAL_PCD_Start(&hpcd);
 }
 
-}
-
 // Replace /weak/ definition provided by 'startup_stm32f723xx.s' so needs to be in the global namespace.
 extern "C" void OTG_HS_IRQHandler() {
-    HAL_PCD_IRQHandler(&evk_usb_device_hal::hpcd);
+    HAL_PCD_IRQHandler(&hpcd);
 }
 
 // This is the first callback called after calling 'HAL_PCD_Start' and connecting the device.
 // This is a significantly simplified version of 'HAL_PCD_ResetCallback' from 'usbd_conf.c'.
 // A USB device must always have EP0 open for IN and OUT transactions.
 extern "C" void HAL_PCD_ResetCallback(PCD_HandleTypeDef *const hpcd) {
-    evk_usb_device_hal::device_state = evk_usb_device_hal::device_state_t::default_;
+    device_state = device_state_t::default_;
 
-    HAL_PCD_EP_Open(hpcd, evk_usb_device_hal::ep0_out_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
+    HAL_PCD_EP_Open(hpcd, ep0_out_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
 
-    HAL_PCD_EP_Open(hpcd, evk_usb_device_hal::ep0_in_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
+    HAL_PCD_EP_Open(hpcd, ep0_in_ep_addr, USB_OTG_MAX_EP0_SIZE, EP_TYPE_CTRL);
 }
 
 extern "C" void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum) {
     if (epnum == 0) {
-        if (evk_usb_device_hal::vendor_request_receive_buffer_ready) {
+        if (vendor_request_receive_buffer_ready) {
             const auto count = hpcd->OUT_ep[epnum].xfer_count;
 
-            if (count < evk_usb_device_hal::vendor_request_receive_expected.size()) {
+            if (count < vendor_request_receive_expected.size()) {
                 MBED_ASSERT(false);
             }
 
-            const auto equal = std::equal(begin(evk_usb_device_hal::vendor_request_receive_expected), end(evk_usb_device_hal::vendor_request_receive_expected), begin(evk_usb_device_hal::vendor_request_receive_buffer));
+            const auto equal = std::equal(begin(vendor_request_receive_expected), end(vendor_request_receive_expected), begin(vendor_request_receive_buffer));
             if (!equal) {
                 MBED_ASSERT(false);
             }
-            evk_usb_device_hal::vendor_request_receive_buffer_ready = false;
+            vendor_request_receive_buffer_ready = false;
         }
     } else if (epnum == 1) {
         // ep1_receive_buffer contains data from the bulk transfer so clear ready for the next transfer...
-        evk_usb_device_hal::ep1_receive_buffer.fill(0);
+        ep1_receive_buffer.fill(0);
         // Prepare for another transfer...
-        HAL_PCD_EP_Receive(hpcd, evk_usb_device_hal::ep1_out_ep_addr, evk_usb_device_hal::ep1_receive_buffer.data(), evk_usb_device_hal::ep1_receive_buffer.size());
+        HAL_PCD_EP_Receive(hpcd, ep1_out_ep_addr, ep1_receive_buffer.data(), ep1_receive_buffer.size());
     }
 }
 
@@ -694,10 +692,10 @@ extern "C" void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epn
         // I believe it is necessary for the device to receive the ack sent by the host in the status stage of the sequence.
         // See Figure 8-37. Control Read and Write Sequences.
         // I don't understand what happens if the host doesn't send the ack or sends a nak or something.
-        HAL_PCD_EP_Receive(hpcd, evk_usb_device_hal::ep0_out_ep_addr, nullptr, 0);
+        HAL_PCD_EP_Receive(hpcd, ep0_out_ep_addr, nullptr, 0);
     } else if (epnum == 1) {
         // Prepare for another transfer...
-        HAL_PCD_EP_Transmit(hpcd, evk_usb_device_hal::ep1_in_ep_addr, evk_usb_device_hal::ep1_transmit_buffer.data(), evk_usb_device_hal::ep1_transmit_buffer.size());
+        HAL_PCD_EP_Transmit(hpcd, ep1_in_ep_addr, ep1_transmit_buffer.data(), ep1_transmit_buffer.size());
     }
 }
 
@@ -705,5 +703,7 @@ extern "C" void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epn
 // and calls 'HAL_PCD_SetupStageCallback'.
 // The packet is described in the USB Spec 9.3 USB Device Requests.
 extern "C" void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd) {
-    evk_usb_device_hal::setup_stage_callback(hpcd);
+    setup_stage_callback(hpcd);
+}
+
 }

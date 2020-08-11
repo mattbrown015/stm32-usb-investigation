@@ -196,8 +196,6 @@ void init() {
     MBED_ASSERT(status == osOK);
 }
 
-}
-
 // Override /weak/ implementation provided by stm32f7xx_hal_spi.c.
 // The clocks and IO could just be initialised before calling 'HAL_SPI_Init'
 // but this method is a common theme in all HAL drivers so I'm going to
@@ -244,32 +242,34 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
 
 // Override /weak/ implementation provided by stm32f7xx_hal_spi.c.
 extern "C" void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
-    MBED_UNUSED const auto result = spi_rx::thread.flags_set(spi_rx::rx_complete_flag);
+    MBED_UNUSED const auto result = thread.flags_set(rx_complete_flag);
     MBED_ASSERT(!(result & osFlagsError));
 
-    MBED_ASSERT((spi_rx::hdma.Instance->CR & DMA_SxCR_CT) == DMA_SxCR_CT);
-    uint32_t rx_buffer0_addr = reinterpret_cast<uint32_t>(&spi_rx::rx_buffer[0][0]);
-    uint32_t rx_buffer2_addr = reinterpret_cast<uint32_t>(&spi_rx::rx_buffer[2][0]);
-    spi_rx::hdma.Instance->M0AR
-        = spi_rx::hdma.Instance->M0AR == rx_buffer0_addr
+    MBED_ASSERT((hdma.Instance->CR & DMA_SxCR_CT) == DMA_SxCR_CT);
+    uint32_t rx_buffer0_addr = reinterpret_cast<uint32_t>(&rx_buffer[0][0]);
+    uint32_t rx_buffer2_addr = reinterpret_cast<uint32_t>(&rx_buffer[2][0]);
+    hdma.Instance->M0AR
+        = hdma.Instance->M0AR == rx_buffer0_addr
         ? rx_buffer2_addr
         : rx_buffer0_addr;
 }
 
 extern "C" void HAL_SPI_M1RxCpltCallback(SPI_HandleTypeDef *hspi) {
-    MBED_UNUSED const auto result = spi_rx::thread.flags_set(spi_rx::rx_complete_flag);
+    MBED_UNUSED const auto result = thread.flags_set(rx_complete_flag);
     MBED_ASSERT(!(result & osFlagsError));
 
-    MBED_ASSERT((spi_rx::hdma.Instance->CR & DMA_SxCR_CT) == 0);
-    uint32_t rx_buffer1_addr = reinterpret_cast<uint32_t>(&spi_rx::rx_buffer[1][0]);
-    uint32_t rx_buffer3_addr = reinterpret_cast<uint32_t>(&spi_rx::rx_buffer[3][0]);
-    spi_rx::hdma.Instance->M1AR
-        = spi_rx::hdma.Instance->M1AR == rx_buffer1_addr
+    MBED_ASSERT((hdma.Instance->CR & DMA_SxCR_CT) == 0);
+    uint32_t rx_buffer1_addr = reinterpret_cast<uint32_t>(&rx_buffer[1][0]);
+    uint32_t rx_buffer3_addr = reinterpret_cast<uint32_t>(&rx_buffer[3][0]);
+    hdma.Instance->M1AR
+        = hdma.Instance->M1AR == rx_buffer1_addr
         ? rx_buffer3_addr
         : rx_buffer1_addr;
 }
 
 // Override /weak/ implementation provided by startup_stm32f723xx.s.
 extern "C" void DMA1_Stream3_IRQHandler() {
-    HAL_DMA_IRQHandler(&spi_rx::hdma);
+    HAL_DMA_IRQHandler(&hdma);
+}
+
 }
