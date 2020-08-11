@@ -26,7 +26,6 @@ void led_init() {
     LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_1);
 }
 
-
 void show_running() {
     using namespace std::chrono_literals;
 
