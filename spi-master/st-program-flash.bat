@@ -1,1 +1,1 @@
-"C:\Program Files (x86)\STMicroelectronics\STM32 ST-LINK Utility\ST-LINK Utility\ST-LINK_CLI.exe" -c SWD UR -P BUILD\NUCLEO_F767ZI\GCC_ARM-DEBUG\spi-master.bin 0x08000000 -V -Rst
+"C:\Program Files (x86)\STMicroelectronics\STM32 ST-LINK Utility\ST-LINK Utility\ST-LINK_CLI.exe" -c SN=0670FF393238424E43191450 SWD UR -P BUILD\NUCLEO_F767ZI\GCC_ARM-DEBUG\spi-master.bin 0x08000000 -V -Rst
