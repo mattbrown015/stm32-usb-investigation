@@ -1,5 +1,4 @@
-#ifndef SHOW_RUNNING_H
-#define SHOW_RUNNING_H
+#pragma once
 
 namespace show_running
 {
@@ -7,5 +6,3 @@ namespace show_running
 void init();
 
 }
-
-#endif

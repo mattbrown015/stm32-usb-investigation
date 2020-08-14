@@ -1,5 +1,4 @@
-#ifndef SPI_RX_H
-#define SPI_RX_H
+#pragma once
 
 namespace spi_rx
 {
@@ -7,5 +6,3 @@ namespace spi_rx
 void init();
 
 }
-
-#endif

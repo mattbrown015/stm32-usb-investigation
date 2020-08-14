@@ -1,5 +1,4 @@
-#ifndef EVK_USB_DEVICE_HAL_H
-#define EVK_USB_DEVICE_HAL_H
+#pragma once
 
 namespace evk_usb_device_hal
 {
@@ -7,5 +6,3 @@ namespace evk_usb_device_hal
 void init();
 
 }
-
-#endif
