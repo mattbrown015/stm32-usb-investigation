@@ -1,7 +1,7 @@
 #include "show-running.h"
 
-#include <rtos/ThisThread.h>
-#include <rtos/Thread.h>
+#include "main.h"
+
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_gpio.h>
 
 namespace show_running
@@ -9,10 +9,6 @@ namespace show_running
 
 namespace
 {
-
-const size_t stack_size = 512; // Arbitrarily /small/ stack
-MBED_ALIGN(8) unsigned char stack[stack_size];
-rtos::Thread thread(osPriorityLow, sizeof(stack), stack, "show_running");
 
 // Use green LED to indicate thread running.
 void led_init() {
@@ -27,22 +23,17 @@ void led_init() {
 }
 
 void show_running() {
-    using namespace std::chrono_literals;
-
-    led_init();
-
-    while (1) {
-        LL_GPIO_TogglePin(GPIOB, LL_GPIO_PIN_1);
-
-        rtos::ThisThread::sleep_for(1s);
-    }
+    LL_GPIO_TogglePin(GPIOB, LL_GPIO_PIN_1);
 }
 
 }
 
 void init() {
-    MBED_UNUSED const auto status = thread.start(show_running);
-    MBED_ASSERT(status == osOK);
+    using namespace std::chrono_literals;
+
+    led_init();
+
+    event_queue.call_every(1s, show_running);
 }
 
 }
