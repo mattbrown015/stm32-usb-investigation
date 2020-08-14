@@ -175,11 +175,11 @@ void find_expected_rx_pattern() {
 
     for (auto buffer_index = 0u; buffer_index < num_buffers; ++buffer_index) {
         // Only checking the first word, it's enough for now.
-        const uint32_t rx_pattern = *reinterpret_cast<uint32_t*>(&rx_buffer[buffer_index][0]);
-        printf("rx_pattern 0x%" PRIx32 " buffer_index %u\n", rx_pattern, buffer_index);
+        const uint32_t *const rx_pattern = reinterpret_cast<uint32_t*>(&rx_buffer[buffer_index][0]);
+        printf("rx_pattern 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 " buffer_index %u\n", *rx_pattern, *(rx_pattern + 1), *(rx_pattern + 2), *(rx_pattern + 3), buffer_index);
         bool rx_pattern_recognised = false;
         for (auto shift = 0u; shift < num_bits; ++shift) {
-            if (rx_pattern == possible_rx_patterns[shift]) {
+            if (*rx_pattern == possible_rx_patterns[shift]) {
                 rx_pattern_recognised = true;
                 break;
             }
