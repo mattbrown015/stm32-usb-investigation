@@ -1,10 +1,14 @@
 #include "spi-rx.h"
 
+#include "main.h"
+
 #include <platform/mbed_assert.h>
 #include <rtos/ThisThread.h>
 #include <rtos/Thread.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
+#include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_exti.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_gpio.h>
+#include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_system.h>
 
 #include <cinttypes>
 #include <climits>
@@ -136,6 +140,24 @@ void led_init() {
     LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_7);
 }
 
+// Use blue user button to request data check.
+void button_init() {
+    // GPIOA already enabled by led_init.
+    // __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    // PA0, SYS_B_USER, blue, pulled down on the board
+    LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_0, LL_GPIO_MODE_INPUT);
+
+    LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTA, LL_SYSCFG_EXTI_LINE0);
+
+    LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_0);
+    LL_EXTI_EnableFallingTrig_0_31(LL_EXTI_LINE_0);
+    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_0);
+
+    HAL_NVIC_SetPriority(EXTI0_IRQn, 15, 15);
+    HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+}
+
 uint32_t rotate_word(const uint32_t word, const uint32_t shift) {
     return word << shift | word >> (num_bits - shift);
 }
@@ -146,16 +168,24 @@ void possible_rx_patterns_init() {
     }
 }
 
-bool find_expected_rx_pattern(const size_t buffer_index) {
-    // Only checking the first word, it's enough for now.
-    const uint32_t rx_pattern = *reinterpret_cast<uint32_t*>(&rx_buffer[buffer_index][0]);
-    for (auto shift = 0u; shift < num_bits; ++shift) {
-        if (rx_pattern == possible_rx_patterns[shift]) {
-            return true;
+void find_expected_rx_pattern() {
+    puts("check buffers");
+
+    for (auto buffer_index = 0u; buffer_index < num_buffers; ++buffer_index) {
+        // Only checking the first word, it's enough for now.
+        const uint32_t rx_pattern = *reinterpret_cast<uint32_t*>(&rx_buffer[buffer_index][0]);
+        printf("rx_pattern 0x%" PRIx32 " buffer_index %u\n", rx_pattern, buffer_index);
+        bool rx_pattern_recognised = false;
+        for (auto shift = 0u; shift < num_bits; ++shift) {
+            if (rx_pattern == possible_rx_patterns[shift]) {
+                rx_pattern_recognised = true;
+                break;
+            }
+        }
+        if (!rx_pattern_recognised) {
+            puts("rx_pattern unrecognised");
         }
     }
-    printf("rx_pattern unrecognised 0x%" PRIx32 " buffer_index %u\n", rx_pattern, buffer_index);
-    return false;
 }
 
 void spi_rx() {
@@ -164,6 +194,7 @@ void spi_rx() {
     spi_init();
     dma_init();
     led_init();
+    button_init();
 
     possible_rx_patterns_init();
 
@@ -175,13 +206,6 @@ void spi_rx() {
     while (1) {
         const auto result = rtos::ThisThread::flags_wait_all(rx_complete_flag);
         MBED_ASSERT(!(result & osFlagsError));
-
-        // Weak initial demo of doing something with the buffers.
-        // 'sleep_for' below means I can see the LED flashing but it also means the loop doesn't run
-        // for ever buffer complete.
-        for (auto i = 0u; i < num_buffers; ++i) {
-            find_expected_rx_pattern(i);
-        }
 
         LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_7);
 
@@ -270,6 +294,15 @@ extern "C" void HAL_SPI_M1RxCpltCallback(SPI_HandleTypeDef *hspi) {
 // Override /weak/ implementation provided by startup_stm32f723xx.s.
 extern "C" void DMA1_Stream3_IRQHandler() {
     HAL_DMA_IRQHandler(&hdma);
+}
+
+// Override /weak/ implementation provided by startup_stm32f723xx.s.
+extern "C" void EXTI0_IRQHandler() {
+    if (LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_0)) {
+        LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_0);
+    }
+
+    event_queue.call(find_expected_rx_pattern);
 }
 
 }
