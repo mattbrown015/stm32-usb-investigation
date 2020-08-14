@@ -92,6 +92,8 @@ rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "spi_rx");
 
 const uint32_t rx_complete_flag = 1 << 0;
 
+std::atomic_flag led_dwell = ATOMIC_FLAG_INIT;
+
 const size_t num_buffers = 4;
 uint8_t rx_buffer[num_buffers][512] = { { 0 } };
 
@@ -188,9 +190,17 @@ void find_expected_rx_pattern() {
     }
 }
 
-void spi_rx() {
-    using namespace std::chrono_literals;
+void toggle_led() {
+    if (!led_dwell.test_and_set()) {
+        LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_7);
 
+        using namespace std::chrono_literals;
+        MBED_UNUSED const auto id = event_queue.call_in(500ms, mbed::callback(&led_dwell, &std::atomic_flag::clear), std::memory_order_seq_cst);
+        MBED_ASSERT(id != 0);
+    }
+}
+
+void spi_rx() {
     spi_init();
     dma_init();
     led_init();
@@ -206,10 +216,6 @@ void spi_rx() {
     while (1) {
         const auto result = rtos::ThisThread::flags_wait_all(rx_complete_flag);
         MBED_ASSERT(!(result & osFlagsError));
-
-        LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_7);
-
-        rtos::ThisThread::sleep_for(500ms);
     }
 }
 
@@ -266,6 +272,8 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
 
 // Override /weak/ implementation provided by stm32f7xx_hal_spi.c.
 extern "C" void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
+    toggle_led();
+
     MBED_UNUSED const auto result = thread.flags_set(rx_complete_flag);
     MBED_ASSERT(!(result & osFlagsError));
 
@@ -279,6 +287,8 @@ extern "C" void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
 }
 
 extern "C" void HAL_SPI_M1RxCpltCallback(SPI_HandleTypeDef *hspi) {
+    toggle_led();
+
     MBED_UNUSED const auto result = thread.flags_set(rx_complete_flag);
     MBED_ASSERT(!(result & osFlagsError));
 
