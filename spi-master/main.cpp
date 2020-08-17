@@ -98,7 +98,6 @@ mbed::InterruptIn sw_user(USER_BUTTON);
 void sw_user_rise() {
     MBED_UNUSED const auto result = thread.flags_set(toggle_tx_flag);
     MBED_ASSERT(!(result & osFlagsError));
-
 }
 
 void spi_init() {
