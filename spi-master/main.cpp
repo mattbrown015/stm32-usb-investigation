@@ -4,8 +4,6 @@
 
 #include <drivers/InterruptIn.h>
 #include <platform/mbed_assert.h>
-#include <rtos/ThisThread.h>
-#include <rtos/Thread.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_gpio.h>
 
@@ -87,17 +85,14 @@ DMA_HandleTypeDef hdma = {
 
 uint8_t tx_buffer[] = { 's', 'p', 'i', ' ' };
 
-const size_t stack_size = OS_STACK_SIZE; // /Normal/ stack size
-MBED_ALIGN(8) unsigned char stack[stack_size];
-rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "spi tx");
-
-const uint32_t toggle_tx_flag = 1 << 0;
+bool dma_running = false;
 
 mbed::InterruptIn sw_user(USER_BUTTON);
 
+void toggle_dma();
+
 void sw_user_rise() {
-    MBED_UNUSED const auto result = thread.flags_set(toggle_tx_flag);
-    MBED_ASSERT(!(result & osFlagsError));
+    event_queue.call(toggle_dma);
 }
 
 void spi_init() {
@@ -125,24 +120,19 @@ void stop_circular_dma() {
     MBED_ASSERT(status == HAL_OK);
 }
 
-void wait_for_button_press() {
-    MBED_UNUSED const auto status = rtos::ThisThread::flags_wait_all(toggle_tx_flag);
-    MBED_ASSERT(!(status & osFlagsError));
-}
-
-void spi_tx() {
-    while (1) {
+void toggle_dma() {
+    if (!dma_running) {
         LL_GPIO_ResetOutputPin(GPIOD, LL_GPIO_PIN_14);
 
         start_circular_dma();
 
-        wait_for_button_press();
-
+        dma_running = true;
+    } else {
         stop_circular_dma();
 
         LL_GPIO_SetOutputPin(GPIOD, LL_GPIO_PIN_14);
 
-        wait_for_button_press();
+        dma_running = false;
     }
 }
 
@@ -152,8 +142,7 @@ void spi_tx_init() {
     spi_init();
     dma_init();
 
-    MBED_UNUSED const auto status = thread.start(spi_tx);
-    MBED_ASSERT(status == osOK);
+    toggle_dma();
 }
 
 }
