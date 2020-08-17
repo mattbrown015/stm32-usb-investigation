@@ -1,3 +1,5 @@
+#include "main.h"
+
 #include "show-running.h"
 
 #include <drivers/InterruptIn.h>
@@ -8,6 +10,9 @@
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_gpio.h>
 
 #include <cstdio>
+
+MBED_ALIGN(4) unsigned char event_queue_buffer[EVENTS_QUEUE_SIZE];
+events::EventQueue event_queue(EVENTS_QUEUE_SIZE, &event_queue_buffer[0]);
 
 namespace
 {
@@ -203,5 +208,5 @@ int main() {
 
     spi_tx_init();
 
-    rtos::ThisThread::sleep_for(rtos::Kernel::wait_for_u32_forever);
+    event_queue.dispatch_forever();
 }
