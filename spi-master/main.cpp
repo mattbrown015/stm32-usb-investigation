@@ -2,10 +2,11 @@
 
 #include "show-running.h"
 
-#include <drivers/InterruptIn.h>
 #include <platform/mbed_assert.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
+#include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_exti.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_gpio.h>
+#include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_system.h>
 
 #include <cstdio>
 
@@ -87,12 +88,22 @@ uint8_t tx_buffer[] = { 's', 'p', 'i', ' ' };
 
 bool dma_running = false;
 
-mbed::InterruptIn sw_user(USER_BUTTON);
+// Use blue user button to start and stop SPI.
+void button_init() {
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
 
-void toggle_dma();
+    // PC13, USER (blue), pulled down on the board
+    LL_GPIO_SetPinMode(GPIOC, LL_GPIO_PIN_13, LL_GPIO_MODE_INPUT);
 
-void sw_user_rise() {
-    event_queue.call(toggle_dma);
+    LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTC, LL_SYSCFG_EXTI_LINE13);
+
+    LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_13);
+    LL_EXTI_EnableFallingTrig_0_31(LL_EXTI_LINE_13);
+    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_13);
+
+    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 15, 15);
+    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
 void spi_init() {
@@ -137,8 +148,7 @@ void toggle_dma() {
 }
 
 void spi_tx_init() {
-    sw_user.rise(sw_user_rise);
-
+    button_init();
     spi_init();
     dma_init();
 
@@ -187,6 +197,15 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
 // Override /weak/ implementation provided by startup_stm32f767xx.S.
 extern "C" void DMA2_Stream3_IRQHandler() {
     HAL_DMA_IRQHandler(&hdma);
+}
+
+// Override /weak/ implementation provided by startup_stm32f767xx.S.
+extern "C" void EXTI15_10_IRQHandler() {
+    if (LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_13)) {
+        event_queue.call(toggle_dma);
+
+        LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_13);
+    }
 }
 
 int main() {
