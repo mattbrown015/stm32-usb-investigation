@@ -309,10 +309,10 @@ extern "C" void DMA1_Stream3_IRQHandler() {
 // Override /weak/ implementation provided by startup_stm32f723xx.s.
 extern "C" void EXTI0_IRQHandler() {
     if (LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_0)) {
+        event_queue.call(find_expected_rx_pattern);
+
         LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_0);
     }
-
-    event_queue.call(find_expected_rx_pattern);
 }
 
 }
