@@ -131,11 +131,6 @@ void wait_for_button_press() {
 }
 
 void spi_tx() {
-    sw_user.rise(sw_user_rise);
-
-    spi_init();
-    dma_init();
-
     while (1) {
         LL_GPIO_ResetOutputPin(GPIOD, LL_GPIO_PIN_14);
 
@@ -152,6 +147,11 @@ void spi_tx() {
 }
 
 void spi_tx_init() {
+    sw_user.rise(sw_user_rise);
+
+    spi_init();
+    dma_init();
+
     MBED_UNUSED const auto status = thread.start(spi_tx);
     MBED_ASSERT(status == osOK);
 }
