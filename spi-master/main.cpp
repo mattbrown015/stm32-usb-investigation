@@ -70,20 +70,22 @@ DMA_HandleTypeDef hdma = {
         // But to complicate things HAL_SPI_Transmit_DMA checks MemDataAlignment to
         // decide whether or not to enable packing.
         //       /* Packing mode is enabled only if the DMA setting is HALWORD */
-        // I believe setting PSIZE and MSIZE to 'half-word' will reduce the number of DMA
-        // transfers and improve utilisation but I can't prove it.
-        // And, it probably doesn't matter when nothing else is using the bus.
-        .PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD,
-        .MemDataAlignment = DMA_MDATAALIGN_HALFWORD,
+        // I tried various combinations of PSIZE, MSIZE, PBURST and MBURST.
+        // Most combinations just don't work, so that's easy.
+        // PSIZE = half-word and MSIZE = half-word worked, I think because the
+        // SPI can unpacked the half-word writes.
+        // But PSIZE = byte and MSIZE = word feels more natural because the SPI data size is 8-bits.
+        .PeriphDataAlignment = DMA_PDATAALIGN_BYTE,
+        .MemDataAlignment = DMA_MDATAALIGN_WORD,
         // Circular transfer will keep going until it is stopped from software.
         .Mode = DMA_CIRCULAR,
         .Priority = DMA_PRIORITY_LOW,
-        .FIFOMode = DMA_FIFOMODE_DISABLE,
+        .FIFOMode = DMA_FIFOMODE_ENABLE,
         .FIFOThreshold = DMA_FIFO_THRESHOLD_FULL,
         // MemBurst and PeriphBurst are ignored when the FIFO is disabled.
         // From reference manual:
         //     In direct mode, the stream can only generate single transfers and the MBURST[1:0] and PBURST[1:0] bits are forced by hardware.
-        .MemBurst = DMA_MBURST_SINGLE,
+        .MemBurst = DMA_MBURST_INC4,  // MSIZE = word so max MBURST = 4, i.e. 4x4 = 16
         .PeriphBurst = DMA_PBURST_SINGLE
     },
     .Lock = HAL_UNLOCKED,
