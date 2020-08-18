@@ -1,4 +1,7 @@
 {
+    "macros": [
+        "MBED_NO_GLOBAL_USING_DIRECTIVE"
+    ],
     "target_overrides": {
         "*": {
             "platform.stdio-baud-rate": 115200
