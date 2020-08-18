@@ -1,13 +1,17 @@
 #include "evk-usb-device-hal.h"
 
+#include "buffers.h"
 #include "usb-device.h"
 
 #include <platform/mbed_assert.h>
+#include <rtos/ThisThread.h>
+#include <rtos/Thread.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 
-#include <algorithm>
 #include <array>
-#include <numeric>
+
+// I didn't want to include stm32f7xx_ll_usb.h in buffers.h so I've done this. I'm not convinced this was the correct decision.
+static_assert(buffers::size == USB_OTG_HS_MAX_PACKET_SIZE, "Buffer size should be the same as the USB packet size for maximum throughput");
 
 namespace evk_usb_device_hal
 {
@@ -259,8 +263,18 @@ std::array<uint8_t, USB_OTG_MAX_EP0_SIZE> vendor_request_receive_buffer{ 0x00 };
 bool vendor_request_receive_buffer_ready = false;
 const auto vendor_request_receive_expected = std::array<uint8_t, 10>{"some data"};
 
-std::array<uint8_t, usb_device::bulk_transfer_length> ep1_transmit_buffer;
 std::array<uint8_t, usb_device::bulk_transfer_length> ep1_receive_buffer;
+
+const size_t stack_size = OS_STACK_SIZE; // /Normal/ stack size
+MBED_ALIGN(8) unsigned char stack[stack_size];
+rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "usb");
+
+const uint32_t can_transmit_flag = 1 << 0;
+
+void set_can_transmit_flag() {
+    MBED_UNUSED const auto flags = thread.flags_set(can_transmit_flag);
+    MBED_ASSERT(!(flags & osFlagsError));
+}
 
 constexpr uint8_t lsb(const uint16_t word) {
     // Not sure that the explicit mask is necessary.
@@ -397,7 +411,7 @@ void set_configuration(PCD_HandleTypeDef *const hpcd, const setup_data &setup_da
     if (configuration == default_configuration) {
         // Open the bulk in endpoint and prepare to transmit data when host requests it.
         HAL_PCD_EP_Open(hpcd, ep1_in_ep_addr, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
-        HAL_PCD_EP_Transmit(hpcd, ep1_in_ep_addr, ep1_transmit_buffer.data(), ep1_transmit_buffer.size());
+        set_can_transmit_flag();
 
         // Open the bulk out endpoint and prepare to receive data when the host sends it.
         HAL_PCD_EP_Open(hpcd, ep1_out_ep_addr, USB_OTG_HS_MAX_PACKET_SIZE, EP_TYPE_BULK);
@@ -540,11 +554,21 @@ void setup_stage_callback(PCD_HandleTypeDef *const hpcd) {
     }
 }
 
+void usb() {
+    while(1) {
+        MBED_UNUSED const auto flags = rtos::ThisThread::flags_wait_all(can_transmit_flag);
+        MBED_ASSERT(flags == can_transmit_flag);
+
+        const auto buffer = buffers::get_full_buffer();
+        MBED_ASSERT(buffer != nullptr);
+
+        HAL_PCD_EP_Transmit(&hpcd, ep1_in_ep_addr, buffer, buffers::size);
+    }
+}
+
 }
 
 void init() {
-    std::iota(std::begin(ep1_transmit_buffer), std::end(ep1_transmit_buffer), 1);
-
     // 'STM32Cube_FW_F7_V1.16.0/Projects/STM32F723E-Discovery/Applications/USB_Device/HID_Standalone/Src/usbd_conf.c'
     // uses 'HAL_PCD_MspInit' to do some of the configuration. 'HAL_PCD_MspInit' is called from 'HAL_PCD_Init' and it is
     // intended that the application will use it for low level configuration such as clocks and GPIOs.
@@ -644,6 +668,9 @@ void init() {
     HAL_NVIC_EnableIRQ(OTG_HS_IRQn);
 
     HAL_PCD_Start(&hpcd);
+
+    MBED_UNUSED const auto os_status = thread.start(usb);
+    MBED_ASSERT(os_status == osOK);
 }
 
 // Replace /weak/ definition provided by 'startup_stm32f723xx.s' so needs to be in the global namespace.
@@ -694,8 +721,11 @@ extern "C" void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epn
         // I don't understand what happens if the host doesn't send the ack or sends a nak or something.
         HAL_PCD_EP_Receive(hpcd, ep0_out_ep_addr, nullptr, 0);
     } else if (epnum == 1) {
+        const auto buffer_ptr = reinterpret_cast<uint8_t*>(hpcd->IN_ep[epnum].dma_addr);
+        buffers::set_buffer_empty(buffer_ptr);
+
         // Prepare for another transfer...
-        HAL_PCD_EP_Transmit(hpcd, ep1_in_ep_addr, ep1_transmit_buffer.data(), ep1_transmit_buffer.size());
+        set_can_transmit_flag();
     }
 }
 

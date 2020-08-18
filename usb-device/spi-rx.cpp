@@ -1,5 +1,6 @@
 #include "spi-rx.h"
 
+#include "buffers.h"
 #include "main.h"
 
 #include <platform/mbed_assert.h>
@@ -94,8 +95,8 @@ const uint32_t rx_complete_flag = 1 << 0;
 
 std::atomic_flag led_dwell = ATOMIC_FLAG_INIT;
 
-const size_t num_buffers = 4;
-uint8_t rx_buffer[num_buffers][512] = { { 0 } };
+uint8_t m0_overflow_buffer[buffers::size];
+uint8_t m1_overflow_buffer[buffers::size];
 
 // 'spi-master' repeatedly transmits 4 characters, 's', 'p', 'i' and ' '.
 // There is no synchronisation so these will end up in the SPI rx buffer with an unknown bit offset.
@@ -173,10 +174,12 @@ void possible_rx_patterns_init() {
 void find_expected_rx_pattern() {
     puts("check buffers");
 
-    for (auto buffer_index = 0u; buffer_index < num_buffers; ++buffer_index) {
-        // Only checking the first word, it's enough for now.
-        const uint32_t *const rx_pattern = reinterpret_cast<uint32_t*>(&rx_buffer[buffer_index][0]);
-        printf("rx_pattern 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 " buffer_index %u\n", *rx_pattern, *(rx_pattern + 1), *(rx_pattern + 2), *(rx_pattern + 3), buffer_index);
+    // Only check 1 full buffer, I think it's enough for now.
+    // The goal is to perform this check on the host.
+    const auto buffer_ptr = buffers::peek_full_buffer();
+    if (buffer_ptr != nullptr) {
+        const uint32_t *const rx_pattern = reinterpret_cast<uint32_t*>(buffer_ptr);
+        printf("rx_pattern 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n", *rx_pattern, *(rx_pattern + 1), *(rx_pattern + 2), *(rx_pattern + 3));
         bool rx_pattern_recognised = false;
         for (auto shift = 0u; shift < num_bits; ++shift) {
             if (*rx_pattern == possible_rx_patterns[shift]) {
@@ -208,9 +211,15 @@ void spi_rx() {
 
     possible_rx_patterns_init();
 
+    // Assume buffers available during initialisation.
+    uint8_t *const pData0 = buffers::get_empty_buffer();
+    MBED_ASSERT(pData0 != nullptr);
+    uint8_t *const pData1 = buffers::get_empty_buffer();
+    MBED_ASSERT(pData1 != nullptr);
+
     // When the double-buffer mode is enabled, the circular mode is automatically enabled
     // which means it runs continuously until stopped by the software.
-    MBED_UNUSED const auto status = HAL_SPI_Receive_MultiBufferDMA(&hspi, &rx_buffer[0][0], &rx_buffer[1][0], sizeof(rx_buffer[0]));
+    MBED_UNUSED const auto status = HAL_SPI_Receive_MultiBufferDMA(&hspi, pData0, pData1, buffers::size);
     MBED_ASSERT(status == HAL_OK);
 
     while (1) {
@@ -278,12 +287,13 @@ extern "C" void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
     MBED_ASSERT(!(result & osFlagsError));
 
     MBED_ASSERT((hdma.Instance->CR & DMA_SxCR_CT) == DMA_SxCR_CT);
-    uint32_t rx_buffer0_addr = reinterpret_cast<uint32_t>(&rx_buffer[0][0]);
-    uint32_t rx_buffer2_addr = reinterpret_cast<uint32_t>(&rx_buffer[2][0]);
-    hdma.Instance->M0AR
-        = hdma.Instance->M0AR == rx_buffer0_addr
-        ? rx_buffer2_addr
-        : rx_buffer0_addr;
+    uint8_t *const full_buffer_ptr = reinterpret_cast<uint8_t*>(hdma.Instance->M0AR);
+    if (full_buffer_ptr != &m0_overflow_buffer[0]) {
+        buffers::set_buffer_full(full_buffer_ptr);
+    }
+    uint8_t *const empty_buffer_ptr = buffers::get_empty_buffer();
+    uint8_t *const buffer_ptr = empty_buffer_ptr != nullptr ? empty_buffer_ptr : &m0_overflow_buffer[0];
+    hdma.Instance->M0AR = reinterpret_cast<uint32_t>(buffer_ptr);
 }
 
 extern "C" void HAL_SPI_M1RxCpltCallback(SPI_HandleTypeDef *hspi) {
@@ -293,12 +303,13 @@ extern "C" void HAL_SPI_M1RxCpltCallback(SPI_HandleTypeDef *hspi) {
     MBED_ASSERT(!(result & osFlagsError));
 
     MBED_ASSERT((hdma.Instance->CR & DMA_SxCR_CT) == 0);
-    uint32_t rx_buffer1_addr = reinterpret_cast<uint32_t>(&rx_buffer[1][0]);
-    uint32_t rx_buffer3_addr = reinterpret_cast<uint32_t>(&rx_buffer[3][0]);
-    hdma.Instance->M1AR
-        = hdma.Instance->M1AR == rx_buffer1_addr
-        ? rx_buffer3_addr
-        : rx_buffer1_addr;
+    uint8_t *const full_buffer_ptr = reinterpret_cast<uint8_t*>(hdma.Instance->M1AR);
+    if (full_buffer_ptr != &m1_overflow_buffer[0]) {
+        buffers::set_buffer_full(full_buffer_ptr);
+    }
+    uint8_t *const empty_buffer_ptr = buffers::get_empty_buffer();
+    uint8_t *const buffer_ptr = empty_buffer_ptr != nullptr ? empty_buffer_ptr : &m1_overflow_buffer[0];
+    hdma.Instance->M1AR = reinterpret_cast<uint32_t>(buffer_ptr);
 }
 
 // Override /weak/ implementation provided by startup_stm32f723xx.s.
