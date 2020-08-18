@@ -67,8 +67,11 @@ DMA_HandleTypeDef hdma = {
         .Priority = DMA_PRIORITY_LOW,
         .FIFOMode = DMA_FIFOMODE_DISABLE,
         .FIFOThreshold = DMA_FIFO_THRESHOLD_FULL,
-        .MemBurst = DMA_MBURST_INC4,
-        .PeriphBurst = DMA_PBURST_INC4
+        // MemBurst and PeriphBurst are ignored when the FIFO is disabled.
+        // From reference manual:
+        //     In direct mode, the stream can only generate single transfers and the MBURST[1:0] and PBURST[1:0] bits are forced by hardware.
+        .MemBurst = DMA_MBURST_SINGLE,
+        .PeriphBurst = DMA_PBURST_SINGLE
     },
     .Lock = HAL_UNLOCKED,
     .State = HAL_DMA_STATE_RESET,
