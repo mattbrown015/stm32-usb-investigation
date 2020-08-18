@@ -295,11 +295,12 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
 }
 
 bool repeat_bulk_in_transfer(libusb_device_handle *const device_handle) {
-    printf("perform %d bulk in transfers\n", usb_device::number_of_bulk_in_repeats);
+    const auto number_of_bulk_in_repeats = 10000;
+    printf("perform %d bulk in transfers\n", number_of_bulk_in_repeats);
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-    for (auto i = 0; i < usb_device::number_of_bulk_in_repeats; ++i) {
+    for (auto i = 0; i < number_of_bulk_in_repeats; ++i) {
         if (!bulk_transfer_in(device_handle)) return false;
     }
 
@@ -307,13 +308,13 @@ bool repeat_bulk_in_transfer(libusb_device_handle *const device_handle) {
     const auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
 
     printf("duration_us %lld us\n", duration_us);
-    const auto throughput_bytes_per_us = (static_cast<double>(usb_device::bulk_transfer_length) * usb_device::number_of_bulk_in_repeats) / duration_us;
+    const auto throughput_bytes_per_us = (static_cast<double>(usb_device::bulk_transfer_length) * number_of_bulk_in_repeats) / duration_us;
     const auto throughput_bytes_per_s = throughput_bytes_per_us * 100000;
     const auto throughput_megabytes_per_s = throughput_bytes_per_s / 100000;
     const auto throughput_megabits_per_s = throughput_megabytes_per_s * 8;
     printf("throughput MB/s %f\n", throughput_megabytes_per_s);
     printf("throughput Mbit/s %f\n", throughput_megabits_per_s);
-    printf("completed %d bulk in transfers\n", usb_device::number_of_bulk_in_repeats);
+    printf("completed %d bulk in transfers\n", number_of_bulk_in_repeats);
 
     return true;
 }
