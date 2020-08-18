@@ -63,6 +63,16 @@ DMA_HandleTypeDef hdma = {
         .Direction = DMA_PERIPH_TO_MEMORY,
         .PeriphInc = DMA_PINC_DISABLE,
         .MemInc = DMA_MINC_ENABLE,
+        // In direct mode PSIZE and MSIZE should be the same.
+        // From the reference manual:
+        //     In direct mode (DMDIS = 0 in the DMA_SxFCR register), the packing/unpacking of data is
+        //     not possible. In this case, it is not allowed to have different source and destination transfer
+        //     data widths: both are equal and defined by the PSIZE bits in the DMA_SxCR register.
+        //     MSIZE bits are not relevant.
+        // Which made me think MemDataAlignment was irrelevant in direct mode.
+        // But to complicate things HAL_SPI_TransmitReceive_DMA checks MemDataAlignment when
+        // configuring the SPI FIFO threshold:
+        //       /* Set RX Fifo threshold according the reception data length: 16bit */
         .PeriphDataAlignment = DMA_PDATAALIGN_BYTE,
         .MemDataAlignment = DMA_MDATAALIGN_BYTE,
         // Circular transfer will keep going until it is stopped from software.

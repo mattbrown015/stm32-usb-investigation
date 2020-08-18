@@ -60,8 +60,21 @@ DMA_HandleTypeDef hdma = {
         .Direction = DMA_MEMORY_TO_PERIPH,
         .PeriphInc = DMA_PINC_DISABLE,
         .MemInc = DMA_MINC_ENABLE,
-        .PeriphDataAlignment = DMA_PDATAALIGN_BYTE,
-        .MemDataAlignment = DMA_MDATAALIGN_BYTE,
+        // In direct mode PSIZE and MSIZE should be the same.
+        // From the reference manual:
+        //     In direct mode (DMDIS = 0 in the DMA_SxFCR register), the packing/unpacking of data is
+        //     not possible. In this case, it is not allowed to have different source and destination transfer
+        //     data widths: both are equal and defined by the PSIZE bits in the DMA_SxCR register.
+        //     MSIZE bits are not relevant.
+        // Which made me think MemDataAlignment was irrelevant in direct mode.
+        // But to complicate things HAL_SPI_Transmit_DMA checks MemDataAlignment to
+        // decide whether or not to enable packing.
+        //       /* Packing mode is enabled only if the DMA setting is HALWORD */
+        // I believe setting PSIZE and MSIZE to 'half-word' will reduce the number of DMA
+        // transfers and improve utilisation but I can't prove it.
+        // And, it probably doesn't matter when nothing else is using the bus.
+        .PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD,
+        .MemDataAlignment = DMA_MDATAALIGN_HALFWORD,
         // Circular transfer will keep going until it is stopped from software.
         .Mode = DMA_CIRCULAR,
         .Priority = DMA_PRIORITY_LOW,
