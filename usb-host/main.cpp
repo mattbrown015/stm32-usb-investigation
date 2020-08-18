@@ -2,6 +2,7 @@
 
 #include <libusb-1.0/libusb.h>
 
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cinttypes>
@@ -19,6 +20,24 @@ uint8_t epbulk_in_address = invalid_ep_address;
 uint16_t epbulk_in_mps = 0;
 uint8_t epbulk_out_address = invalid_ep_address;
 uint16_t epbulk_out_mps = 0;
+
+// 'spi-master' repeatedly transmits 4 characters, 's', 'p', 'i' and ' '.
+// There is no synchronisation so these will end up in the SPI rx buffer with an unknown bit offset.
+// The easiest way to work out if the characters are in the rx buffer is to treat them as a word.
+// As it happens I know "{ 's', 'p', 'i', ' ' }" interpretted as uint32_t is 0x20697073 on this platform.
+// But, I couldn't resist over complicating things and using the union hack to calculate it
+// as well as checking we are little endian!
+#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+# error
+#endif
+const union byte_array_to_word_hack {
+    const uint8_t bytes[4];
+    const uint32_t word;
+} expected = {
+    .bytes  = { 's', 'p', 'i', ' ' }
+};
+const auto num_bits = sizeof(expected) * CHAR_BIT;
+std::array<uint32_t, num_bits> possible_rx_patterns;
 
 void print_libusb_error(const libusb_error error, const char *const libusb_api_function)  {
     printf("'%s' failed, error value %d, error name '%s', error description '%s'\n", libusb_api_function, error, libusb_error_name(error), libusb_strerror(error));
@@ -257,6 +276,25 @@ bool control_transfer_in(libusb_device_handle *const device_handle) {
     }
 }
 
+#if defined(CHECK_BULK_IN_DATA)
+void find_expected_rx_pattern(unsigned char *data) {
+    puts("check buffers");
+
+    const uint32_t *const rx_pattern = reinterpret_cast<uint32_t*>(data);
+    printf("rx_pattern 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n", *rx_pattern, *(rx_pattern + 1), *(rx_pattern + 2), *(rx_pattern + 3));
+    bool rx_pattern_recognised = false;
+    for (auto shift = 0u; shift < num_bits; ++shift) {
+        if (*rx_pattern == possible_rx_patterns[shift]) {
+            rx_pattern_recognised = true;
+            break;
+        }
+    }
+    if (!rx_pattern_recognised) {
+        puts("rx_pattern unrecognised");
+    }
+}
+#endif
+
 bool bulk_transfer_in(libusb_device_handle *const device_handle) {
     assert(epbulk_in_address != invalid_ep_address);
     assert(epbulk_in_mps != 0);
@@ -281,20 +319,25 @@ bool bulk_transfer_in(libusb_device_handle *const device_handle) {
             return false;
         }
 #if defined(CHECK_BULK_IN_DATA)
-        std::vector<unsigned char> expected(length);
-        std::iota(std::begin(expected), std::end(expected), 1);
-        if (!std::equal(std::begin(expected), std::end(expected), data)) {
-            for (auto i = 0u; i < sizeof(data); ++i) {
-                printf("0x%02" PRIx8 " ", data[i]);
-            }
-            putchar('\n');
-        }
+        find_expected_rx_pattern(&data[0]);
 #endif
         return true;
     }
 }
 
+uint32_t rotate_word(const uint32_t word, const uint32_t shift) {
+    return word << shift | word >> (num_bits - shift);
+}
+
+void possible_rx_patterns_init() {
+    for (auto shift = 0u; shift < num_bits; ++shift) {
+        possible_rx_patterns[shift] = rotate_word(expected.word, shift);
+    }
+}
+
 bool repeat_bulk_in_transfer(libusb_device_handle *const device_handle) {
+    possible_rx_patterns_init();
+
     const auto number_of_bulk_in_repeats = 10000;
     printf("perform %d bulk in transfers\n", number_of_bulk_in_repeats);
 
