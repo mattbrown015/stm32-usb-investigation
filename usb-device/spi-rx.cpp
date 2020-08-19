@@ -32,7 +32,15 @@ SPI_HandleTypeDef hspi = {
         .DataSize = SPI_DATASIZE_8BIT,
         .CLKPolarity = SPI_POLARITY_LOW,
         .CLKPhase = SPI_PHASE_1EDGE,
-        .NSS = SPI_NSS_HARD_INPUT,
+        // We're not using the NSS pin hence should enable 'software slave management'.
+        // This means CR1_SSI is used instead of the NSS pin. I.e. 'SPI2->SSI |= SPI_CR1_SSI' means data will not be received.
+        // It is possible to ignore NSS and have 'software slave management' enabled or disabled.
+        // When 'software slave management' is disabled and the NSS pin is *not* configured the peripheral sees the NSS as low
+        // and the peripheral receives data.
+        // When 'software slave management' is enabled SSI defaults to 0 and again data is received without doing anything explicit.
+        // There must be some difference between setting SSI and disabling the peripheral, with CR1_SPE, but at the moment that difference
+        // is not clear to me.
+        .NSS = SPI_NSS_SOFT,
         // Baud rate prescaler irrelevant for slave device
         .BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16,
         .FirstBit = SPI_FIRSTBIT_MSB,
