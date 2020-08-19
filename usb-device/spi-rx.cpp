@@ -14,6 +14,8 @@
 #include <cinttypes>
 #include <climits>
 
+#undef CHECK_OVERFLOW_BUFFERS
+
 namespace spi_rx
 {
 
@@ -184,6 +186,8 @@ void possible_rx_patterns_init() {
     }
 }
 
+#if !defined(CHECK_OVERFLOW_BUFFERS)
+
 void find_expected_rx_pattern() {
     puts("check buffers");
 
@@ -205,6 +209,40 @@ void find_expected_rx_pattern() {
         }
     }
 }
+
+#else
+
+void find_expected_rx_pattern_(uint8_t *buffer_ptr, const size_t length) {
+    const uint32_t *rx_pattern = reinterpret_cast<uint32_t*>(buffer_ptr);
+    printf("rx_pattern 0x%" PRIx32 "\n", *rx_pattern);
+    bool rx_pattern_recognised = false;
+    for (auto shift = 0u; shift < num_bits; ++shift) {
+        if (*rx_pattern == possible_rx_patterns[shift]) {
+            rx_pattern_recognised = true;
+            break;
+        }
+    }
+    if (!rx_pattern_recognised) {
+        puts("rx_pattern unrecognised");
+    }
+    for (auto i = 0u; i < length / sizeof(uint32_t); ++i) {
+        printf("0x%" PRIx32 " ", *rx_pattern);
+        ++rx_pattern;
+
+        if (((i + 1) % 8) == 0) putchar('\n');
+    }
+    memset(buffer_ptr, 0, length);
+}
+
+void find_expected_rx_pattern() {
+    puts("check m0_overflow_buffer");
+    find_expected_rx_pattern_(&m0_overflow_buffer[0], sizeof(m0_overflow_buffer));
+
+    puts("check m1_overflow_buffer");
+    find_expected_rx_pattern_(&m1_overflow_buffer[0], sizeof(m1_overflow_buffer));
+}
+
+#endif
 
 void toggle_led() {
     if (!led_dwell.test_and_set()) {
