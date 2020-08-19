@@ -29,7 +29,7 @@ void show_running() {
 }
 
 void init() {
-    using namespace std::chrono_literals;
+    using std::chrono_literals::operator""s;
 
     led_init();
 

@@ -208,9 +208,10 @@ void find_expected_rx_pattern() {
 
 void toggle_led() {
     if (!led_dwell.test_and_set()) {
+        using std::chrono_literals::operator""ms;
+
         LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_7);
 
-        using namespace std::chrono_literals;
         MBED_UNUSED const auto id = event_queue.call_in(500ms, mbed::callback(&led_dwell, &std::atomic_flag::clear), std::memory_order_seq_cst);
         MBED_ASSERT(id != 0);
     }
