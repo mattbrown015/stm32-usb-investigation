@@ -8,6 +8,7 @@
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_gpio.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_system.h>
 
+#include <atomic>
 #include <cstdio>
 
 MBED_ALIGN(4) unsigned char event_queue_buffer[EVENTS_QUEUE_SIZE];
@@ -106,6 +107,8 @@ uint8_t tx_buffer[] = { 's', 'p', 'i', ' ' };
 
 bool dma_running = false;
 
+std::atomic_bool debounce(false);
+
 // Use blue user button to start and stop SPI.
 void button_init() {
     __HAL_RCC_SYSCFG_CLK_ENABLE();
@@ -165,6 +168,10 @@ void toggle_dma() {
     }
 }
 
+void stop_debounce() {
+    debounce = false;
+}
+
 void spi_tx_init() {
     button_init();
     spi_init();
@@ -220,7 +227,12 @@ extern "C" void DMA2_Stream3_IRQHandler() {
 // Override /weak/ implementation provided by startup_stm32f767xx.S.
 extern "C" void EXTI15_10_IRQHandler() {
     if (LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_13)) {
-        event_queue.call(toggle_dma);
+        if (!debounce.exchange(true)) {
+            using std::chrono_literals::operator""ms;
+
+            event_queue.call(toggle_dma);
+            event_queue.call_in(100ms, stop_debounce);
+        }
 
         LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_13);
     }
