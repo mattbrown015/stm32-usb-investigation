@@ -171,10 +171,6 @@ void toggle_dma() {
     }
 }
 
-void stop_debounce() {
-    debounce = false;
-}
-
 void spi_tx_init() {
     button_init();
     spi_init();
@@ -234,7 +230,7 @@ extern "C" void EXTI15_10_IRQHandler() {
             using std::chrono_literals::operator""ms;
 
             event_queue.call(toggle_dma);
-            event_queue.call_in(100ms, stop_debounce);
+            event_queue.call_in(100ms, mbed::callback(&debounce, &std::atomic_bool::store), false, std::memory_order_seq_cst);
         }
 
         LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_13);
