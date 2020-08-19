@@ -175,8 +175,6 @@ void spi_tx_init() {
     button_init();
     spi_init();
     dma_init();
-
-    toggle_dma();
 }
 
 }
