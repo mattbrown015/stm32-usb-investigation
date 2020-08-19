@@ -107,6 +107,9 @@ uint8_t tx_buffer[] = { 's', 'p', 'i', ' ' };
 
 bool dma_running = false;
 
+#if (ATOMIC_BOOL_LOCK_FREE != 2)
+# error "Expected std::atomic_bool to be lock-free. I don't think it matters except I wonder of locks would work in an ISR."
+#endif
 std::atomic_bool debounce(false);
 
 // Use blue user button to start and stop SPI.
