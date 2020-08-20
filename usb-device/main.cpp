@@ -1,6 +1,7 @@
 #include "main.h"
 
 #include "buffers.h"
+#include "command-line.h"
 #include "evk-usb-device-hal.h"
 #include "show-running.h"
 #include "spi-rx.h"
@@ -20,6 +21,7 @@ int main() {
     buffers::init();  // Initialise the buffers first because the SPI will want an empty buffer during its initialisation.
     spi_rx::init();
     evk_usb_device_hal::init();
+    command_line::init();
 
     event_queue.dispatch_forever();
 }

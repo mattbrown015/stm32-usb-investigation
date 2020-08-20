@@ -1,5 +1,6 @@
 #include "main.h"
 
+#include "command-line.h"
 #include "show-running.h"
 #include "version-string.h"
 
@@ -243,6 +244,8 @@ int main() {
     show_running::init();
 
     spi_tx_init();
+
+    command_line::init();
 
     event_queue.dispatch_forever();
 }
