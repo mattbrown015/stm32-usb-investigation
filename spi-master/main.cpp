@@ -1,9 +1,9 @@
 #include "main.h"
 
 #include "show-running.h"
+#include "version-string.h"
 
 #include <platform/mbed_assert.h>
-#include <platform/mbed_version.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_exti.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_gpio.h>
@@ -237,8 +237,8 @@ extern "C" void EXTI15_10_IRQHandler() {
 }
 
 int main() {
-    puts("spi-master");
-    printf("Mbed OS version %d.%d.%d\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
+    puts(version_string);
+    puts(mbed_os_version_string);
 
     show_running::init();
 
