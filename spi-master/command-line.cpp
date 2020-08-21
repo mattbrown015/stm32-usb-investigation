@@ -1,5 +1,6 @@
 #include "command-line.h"
 
+#include "main.h"
 #include "version-string.h"
 
 #include <rtos/Thread.h>
@@ -24,6 +25,8 @@ void command_line() {
         if (s == "ver") {
             puts(version_string);
             puts(mbed_os_version_string);
+        } else if (s == "toggle-dma") {
+            event_queue.call(toggle_dma);
         } else {
             puts("command not recognised");
         }

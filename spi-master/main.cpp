@@ -157,6 +157,14 @@ void stop_circular_dma() {
     MBED_ASSERT(status == HAL_OK);
 }
 
+void spi_tx_init() {
+    button_init();
+    spi_init();
+    dma_init();
+}
+
+}
+
 void toggle_dma() {
     if (!dma_running) {
         LL_GPIO_ResetOutputPin(GPIOD, LL_GPIO_PIN_14);
@@ -171,14 +179,6 @@ void toggle_dma() {
 
         dma_running = false;
     }
-}
-
-void spi_tx_init() {
-    button_init();
-    spi_init();
-    dma_init();
-}
-
 }
 
 // Override /weak/ implementation provided by stm32f7xx_hal_spi.c.
