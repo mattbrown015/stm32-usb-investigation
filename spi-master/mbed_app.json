@@ -1,5 +1,6 @@
 {
     "macros": [
+        "MBED_CMDLINE_BOOT_MESSAGE=\"spi-master\\n\"",
         "MBED_NO_GLOBAL_USING_DIRECTIVE"
     ],
     "target_overrides": {

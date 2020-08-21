@@ -1,14 +1,11 @@
 #include "command-line.h"
 
 #include "buffers.h"
-#include "main.h"
+#include "serial-mutex.h"
 #include "version-string.h"
 
+#include <features/frameworks/mbed-client-cli/mbed-client-cli/ns_cmdline.h>
 #include <rtos/Thread.h>
-
-#include <iostream>
-#include <sstream>
-#include <vector>
 
 namespace command_line
 {
@@ -20,31 +17,31 @@ const size_t stack_size = OS_STACK_SIZE; // /Normal/ stack size
 MBED_ALIGN(8) unsigned char stack[stack_size];
 rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "command-line");
 
-void command_line() {
-    while (1) {
-        std::string line;
-        std::getline(std::cin, line);
+int version_information(int argc, char *argv[]) {
+    cmd_printf("%s\n", version_string);
+    cmd_printf("%s\n", mbed_os_version_string);
+    return CMDLINE_RETCODE_SUCCESS;
+}
 
-        std::istringstream iss{line};
-        std::vector<std::string> tokenized_line{std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>{}};
-        if (tokenized_line.size() > 0) {
-            if (tokenized_line[0] == "ver") {
-                puts(version_string);
-                puts(mbed_os_version_string);
-            } else if (tokenized_line[0] == "print-buffer") {
-                if (tokenized_line.size() > 1) {
-                    const auto index = std::stoul(tokenized_line[1], 0, 0);
-                    if (index < buffers::number_of) {
-                        event_queue.call(buffers::print_buffer, index);
-                    } else {
-                        printf("Invalid parameter: index must be less than %u\n", buffers::number_of);
-                    }
-                } else {
-                    puts("Too few parameters");
-                }
-            } else {
-                puts("command not recognised");
-            }
+int print_buffer(int argc, char *argv[]) {
+    if (argc > 1) {
+        const auto index = strtoul(argv[1], nullptr, 0);
+        if (index < buffers::number_of) {
+            buffers::print_buffer(index);
+            return CMDLINE_RETCODE_SUCCESS;
+        } else {
+            return CMDLINE_RETCODE_INVALID_PARAMETERS;
+        }
+    } else {
+        return CMDLINE_RETCODE_INVALID_PARAMETERS;
+    }
+}
+
+void command_line() {
+    while(true) {
+        const auto c = getchar();
+        if (c != EOF) {
+            cmd_char_input(c);
         }
     }
 }
@@ -52,6 +49,15 @@ void command_line() {
 }
 
 void init() {
+    cmd_init(nullptr);
+    cmd_mutex_wait_func(serial_mutex::out_lock);
+    cmd_mutex_release_func(serial_mutex::out_unlock);
+
+    cmd_add("version", version_information, "version information", nullptr);
+    cmd_alias_add("ver", "version");
+    cmd_add("printf-buffer", print_buffer, "Print SPI rx buffer", "Print contents of specified SPI rx buffer\nprint-buffer <0..4>\nConcurrency issues exist if the SPI if the SPI master is running");
+    cmd_alias_add("pb", "printf-buffer");
+
     MBED_UNUSED const auto os_status = thread.start(command_line);
     MBED_ASSERT(os_status == osOK);
 }

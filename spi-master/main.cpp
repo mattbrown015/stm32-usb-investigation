@@ -242,16 +242,9 @@ extern "C" void EXTI15_10_IRQHandler() {
 }
 
 int main() {
-    puts(version_string);
-    puts(mbed_os_version_string);
-
     trace::init();
-    tr_debug("debug trace enabled");
-
     show_running::init();
-
     spi_tx_init();
-
     command_line::init();
 
     event_queue.dispatch_forever();

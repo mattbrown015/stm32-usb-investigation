@@ -1,5 +1,6 @@
 #include "buffers.h"
 
+#include <features/frameworks/mbed-client-cli/mbed-client-cli/ns_cmdline.h>
 #include <platform/mbed_assert.h>
 #include <rtos/Mail.h>
 #include <rtos/Kernel.h>
@@ -98,10 +99,10 @@ void print_buffer(const size_t index) {
     MBED_ASSERT(index < number_of);
     const uint32_t *word_ptr = reinterpret_cast<uint32_t*>(&buffer[index][0]);
     for (auto i = 0u; i < size_of / sizeof(uint32_t); ++i) {
-        printf("0x%" PRIx32 " ", *word_ptr);
+        cmd_printf("0x%" PRIx32 " ", *word_ptr);
         ++word_ptr;
 
-        if (((i + 1) % 8) == 0) putchar('\n');
+        if (((i + 1) % 8) == 0) cmd_printf("\n");
     }
 }
 
