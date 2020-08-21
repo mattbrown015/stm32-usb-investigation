@@ -2,8 +2,10 @@
 
 #include "command-line.h"
 #include "show-running.h"
+#include "trace.h"
 #include "version-string.h"
 
+#include <features/frameworks/mbed-trace/mbed-trace/mbed_trace.h>
 #include <platform/mbed_assert.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_ll_exti.h>
@@ -12,6 +14,8 @@
 
 #include <atomic>
 #include <cstdio>
+
+#define TRACE_GROUP "main"
 
 MBED_ALIGN(4) unsigned char event_queue_buffer[EVENTS_QUEUE_SIZE];
 events::EventQueue event_queue(EVENTS_QUEUE_SIZE, &event_queue_buffer[0]);
@@ -240,6 +244,9 @@ extern "C" void EXTI15_10_IRQHandler() {
 int main() {
     puts(version_string);
     puts(mbed_os_version_string);
+
+    trace::init();
+    tr_debug("debug trace enabled");
 
     show_running::init();
 
