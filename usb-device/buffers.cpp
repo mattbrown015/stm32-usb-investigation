@@ -28,16 +28,14 @@ namespace
 //     When the USB layer is ready to transmit it attempts to get a full buffer.
 //     If there isn't a full buffer available it will block.
 
-const size_t num_buffers = 4;
-
-uint8_t buffer[num_buffers][size] = { { 0 } };
+uint8_t buffer[number_of][size_of] = { { 0 } };
 
 struct mail_t {
     uint8_t *buffer_ptr;
 };
 
-rtos::Mail<mail_t, num_buffers> empty_buffers_queue;
-rtos::Mail<mail_t, num_buffers> full_buffers_queue;
+rtos::Mail<mail_t, number_of> empty_buffers_queue;
+rtos::Mail<mail_t, number_of> full_buffers_queue;
 
 #ifndef NDEBUG
 // Perhaps this should be class to avoid this kind of nonsense.
@@ -101,7 +99,7 @@ void init() {
     initialised = true;
 #endif
 
-    for (auto i = 0u; i < num_buffers; ++i) {
+    for (auto i = 0u; i < number_of; ++i) {
         set_buffer_empty(&buffer[i][0]);
     }
 }

@@ -118,8 +118,8 @@ const uint32_t rx_complete_flag = 1 << 0;
 
 std::atomic_flag led_dwell = ATOMIC_FLAG_INIT;
 
-uint8_t m0_overflow_buffer[buffers::size];
-uint8_t m1_overflow_buffer[buffers::size];
+uint8_t m0_overflow_buffer[buffers::size_of];
+uint8_t m1_overflow_buffer[buffers::size_of];
 
 // 'spi-master' repeatedly transmits 4 characters, 's', 'p', 'i' and ' '.
 // There is no synchronisation so these will end up in the SPI rx buffer with an unknown bit offset.
@@ -279,7 +279,7 @@ void spi_rx() {
 
     // When the double-buffer mode is enabled, the circular mode is automatically enabled
     // which means it runs continuously until stopped by the software.
-    MBED_UNUSED const auto status = HAL_SPI_Receive_MultiBufferDMA(&hspi, pData0, pData1, buffers::size);
+    MBED_UNUSED const auto status = HAL_SPI_Receive_MultiBufferDMA(&hspi, pData0, pData1, buffers::size_of);
     MBED_ASSERT(status == HAL_OK);
 
     while (1) {
