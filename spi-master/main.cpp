@@ -5,6 +5,7 @@
 #include "trace.h"
 #include "version-string.h"
 
+#include <features/frameworks/mbed-client-cli/mbed-client-cli/ns_cmdline.h>
 #include <features/frameworks/mbed-trace/mbed-trace/mbed_trace.h>
 #include <platform/mbed_assert.h>
 #include <targets/TARGET_STM/TARGET_STM32F7/STM32Cube_FW/STM32F7xx_HAL_Driver/stm32f7xx_hal.h>
@@ -113,29 +114,6 @@ uint8_t tx_buffer[] = { 's', 'p', 'i', ' ' };
 
 bool dma_running = false;
 
-#if (ATOMIC_BOOL_LOCK_FREE != 2)
-# error "Expected std::atomic_bool to be lock-free. I don't think it matters except I wonder of locks would work in an ISR."
-#endif
-std::atomic_bool debounce(false);
-
-// Use blue user button to start and stop SPI.
-void button_init() {
-    __HAL_RCC_SYSCFG_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-
-    // PC13, USER (blue), pulled down on the board
-    LL_GPIO_SetPinMode(GPIOC, LL_GPIO_PIN_13, LL_GPIO_MODE_INPUT);
-
-    LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTC, LL_SYSCFG_EXTI_LINE13);
-
-    LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_13);
-    LL_EXTI_EnableFallingTrig_0_31(LL_EXTI_LINE_13);
-    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_13);
-
-    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 15, 15);
-    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-}
-
 void spi_init() {
     MBED_UNUSED const auto status = HAL_SPI_Init(&hspi);
     MBED_ASSERT(status == HAL_OK);
@@ -162,7 +140,6 @@ void stop_circular_dma() {
 }
 
 void spi_tx_init() {
-    button_init();
     spi_init();
     dma_init();
 }
@@ -176,12 +153,14 @@ void toggle_dma() {
         start_circular_dma();
 
         dma_running = true;
+        cmd_printf("DMA running\n");
     } else {
         stop_circular_dma();
 
         LL_GPIO_SetOutputPin(GPIOD, LL_GPIO_PIN_14);
 
         dma_running = false;
+        cmd_printf("DMA not running\n");
     }
 }
 
@@ -225,20 +204,6 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
 // Override /weak/ implementation provided by startup_stm32f767xx.S.
 extern "C" void DMA2_Stream3_IRQHandler() {
     HAL_DMA_IRQHandler(&hdma);
-}
-
-// Override /weak/ implementation provided by startup_stm32f767xx.S.
-extern "C" void EXTI15_10_IRQHandler() {
-    if (LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_13)) {
-        if (!debounce.exchange(true)) {
-            using std::chrono_literals::operator""ms;
-
-            event_queue.call(toggle_dma);
-            event_queue.call_in(100ms, mbed::callback(&debounce, &std::atomic_bool::store), false, std::memory_order_seq_cst);
-        }
-
-        LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_13);
-    }
 }
 
 int main() {

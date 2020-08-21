@@ -24,7 +24,7 @@ int version_information(int argc, char *argv[]) {
 }
 
 int toggle_dma_callback(int argc, char *argv[]) {
-    event_queue.call(toggle_dma);
+    toggle_dma();
     return CMDLINE_RETCODE_SUCCESS;
 }
 
