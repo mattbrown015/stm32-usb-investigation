@@ -94,6 +94,17 @@ void set_buffer_full(uint8_t *const buffer_ptr) {
     full_buffers_queue.put(mail);
 }
 
+void print_buffer(const size_t index) {
+    MBED_ASSERT(index < number_of);
+    const uint32_t *word_ptr = reinterpret_cast<uint32_t*>(&buffer[index][0]);
+    for (auto i = 0u; i < size_of / sizeof(uint32_t); ++i) {
+        printf("0x%" PRIx32 " ", *word_ptr);
+        ++word_ptr;
+
+        if (((i + 1) % 8) == 0) putchar('\n');
+    }
+}
+
 void init() {
 #ifndef NDEBUG
     initialised = true;

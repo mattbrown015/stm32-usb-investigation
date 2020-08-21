@@ -18,6 +18,8 @@ MBED_DEPRECATED("Added only to check SPI rx data on the Disco, the buffer return
 uint8_t *peek_full_buffer();
 void set_buffer_full(uint8_t *const buffer_ptr);
 
+void print_buffer(const size_t index);
+
 void init();
 
 }
