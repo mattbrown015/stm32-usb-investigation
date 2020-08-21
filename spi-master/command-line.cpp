@@ -19,13 +19,13 @@ rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "command-line");
 
 void command_line() {
     while (1) {
-        std::string s;
-        std::getline(std::cin, s);
+        std::string line;
+        std::getline(std::cin, line);
 
-        if (s == "ver") {
+        if (line == "ver") {
             puts(version_string);
             puts(mbed_os_version_string);
-        } else if (s == "toggle-dma") {
+        } else if (line == "toggle-dma") {
             event_queue.call(toggle_dma);
         } else {
             puts("command not recognised");
