@@ -113,6 +113,9 @@ DMA_HandleTypeDef hdma = {
 uint8_t tx_buffer[] = { 's', 'p', 'i', ' ' };
 
 bool dma_running = false;
+std::atomic_bool run_dma_for_enabled{false};
+std::atomic_ulong dma_buffer_count{0};
+std::atomic_ulong run_dma_for_number_of_buffers{0};
 
 void spi_init() {
     MBED_UNUSED const auto status = HAL_SPI_Init(&hspi);
@@ -135,8 +138,8 @@ void start_circular_dma() {
 }
 
 void stop_circular_dma() {
-    MBED_UNUSED const auto status = HAL_SPI_DMAStop(&hspi);
-    MBED_ASSERT(status == HAL_OK);
+    // Returns HAL_ERROR if already stopped but I don't think it matters.
+    HAL_SPI_DMAStop(&hspi);
 }
 
 void spi_tx_init() {
@@ -144,6 +147,19 @@ void spi_tx_init() {
     dma_init();
 }
 
+}
+
+void run_dma_for(const unsigned long number_of_buffers) {
+    if (dma_running) {
+        cmd_printf("stop DMA before calling run_dma_for\n");
+        return;
+    }
+
+    dma_buffer_count = 0;
+    run_dma_for_number_of_buffers = number_of_buffers;
+    run_dma_for_enabled = true;
+
+    toggle_dma();
 }
 
 void toggle_dma() {
@@ -199,6 +215,22 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
     LL_GPIO_SetPinSpeed(GPIOA, LL_GPIO_PIN_7, LL_GPIO_SPEED_FREQ_VERY_HIGH);
     LL_GPIO_SetPinOutputType(GPIOA, LL_GPIO_PIN_7, LL_GPIO_OUTPUT_PUSHPULL);
     LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_7, LL_GPIO_PULL_NO);
+}
+
+extern "C" void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
+    if (!run_dma_for_enabled) {
+        return;
+    }
+
+    ++dma_buffer_count;
+    if (dma_buffer_count >= run_dma_for_number_of_buffers) {
+        // Stop the DMA as quickly as possible, i.e. don't wait for the event queue to be scheduled.
+        // When 'tx_buffer' is only 4 bytes long it's quite likely another buffer will be transmitted
+        // before the DMA stops. I'm expecting to make 'tx_buffer' which will change things.
+        HAL_SPI_DMAStop(hspi);
+        run_dma_for_enabled = false;
+        event_queue.call(toggle_dma);  // Will call 'HAL_SPI_DMAStop' again but doesn't seem to matter.
+    }
 }
 
 // Override /weak/ implementation provided by startup_stm32f767xx.S.

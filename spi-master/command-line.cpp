@@ -17,8 +17,19 @@ const size_t stack_size = OS_STACK_SIZE; // /Normal/ stack size
 MBED_ALIGN(8) unsigned char stack[stack_size];
 rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "command-line");
 
+int run_dma_for_callback(int argc, char *argv[]) {
+    if (argc > 1) {
+        const auto number_of_buffers = strtoul(argv[1], nullptr, 0);
+        event_queue.call(run_dma_for, number_of_buffers);
+        return CMDLINE_RETCODE_SUCCESS;
+    } else {
+        return CMDLINE_RETCODE_INVALID_PARAMETERS;
+    }
+    return CMDLINE_RETCODE_SUCCESS;
+}
+
 int toggle_dma_callback(int argc, char *argv[]) {
-    toggle_dma();
+    event_queue.call(toggle_dma);
     return CMDLINE_RETCODE_SUCCESS;
 }
 
@@ -44,6 +55,8 @@ void init() {
     cmd_mutex_wait_func(serial_mutex::out_lock);
     cmd_mutex_release_func(serial_mutex::out_unlock);
 
+    cmd_add("run-dma-for", run_dma_for_callback, "Run DMA for specified number of buffers", "Run DMA for specified number of buffer, this makes it easier to check the buffer contents\nrun-dma-for <num buffers>");
+    cmd_alias_add("rf", "run-dma-for");
     cmd_add("toggle-dma", toggle_dma_callback, "toggle DMA running", nullptr);
     cmd_alias_add("td", "toggle-dma");
     cmd_add("version", version_information, "version information", nullptr);
