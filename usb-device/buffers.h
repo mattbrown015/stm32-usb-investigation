@@ -9,7 +9,7 @@ namespace buffers
 {
 
 const size_t number_of = 4;
-const uint16_t size_of = 512;
+const size_t size_of = 512;
 
 uint8_t *get_empty_buffer();
 void set_buffer_empty(uint8_t *const buffer_ptr);
