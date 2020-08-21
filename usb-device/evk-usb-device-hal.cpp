@@ -11,7 +11,7 @@
 #include <array>
 
 // I didn't want to include stm32f7xx_ll_usb.h in buffers.h so I've done this. I'm not convinced this was the correct decision.
-static_assert(buffers::size == USB_OTG_HS_MAX_PACKET_SIZE, "Buffer size should be the same as the USB packet size for maximum throughput");
+static_assert(buffers::size_of == USB_OTG_HS_MAX_PACKET_SIZE, "Buffer size should be the same as the USB packet size for maximum throughput");
 
 namespace evk_usb_device_hal
 {
@@ -562,7 +562,7 @@ void usb() {
         const auto buffer = buffers::get_full_buffer();
         MBED_ASSERT(buffer != nullptr);
 
-        HAL_PCD_EP_Transmit(&hpcd, ep1_in_ep_addr, buffer, buffers::size);
+        HAL_PCD_EP_Transmit(&hpcd, ep1_in_ep_addr, buffer, buffers::size_of);
     }
 }
 
