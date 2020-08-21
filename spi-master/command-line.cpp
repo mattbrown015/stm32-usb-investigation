@@ -17,6 +17,26 @@ const size_t stack_size = OS_STACK_SIZE; // /Normal/ stack size
 MBED_ALIGN(8) unsigned char stack[stack_size];
 rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "command-line");
 
+int dma_size_callback(int argc, char *argv[]) {
+    if (argc > 1) {
+        const auto size = strtoul(argv[1], nullptr, 0);
+        if (size <= 256) {
+            event_queue.call(set_dma_size, size);
+            return CMDLINE_RETCODE_SUCCESS;
+        } else {
+            return CMDLINE_RETCODE_INVALID_PARAMETERS;
+        }
+    } else {
+        return CMDLINE_RETCODE_INVALID_PARAMETERS;
+    }
+    return CMDLINE_RETCODE_SUCCESS;
+}
+
+int print_tx_buffer_callback(int argc, char *argv[]) {
+    print_tx_buffer();
+    return CMDLINE_RETCODE_SUCCESS;
+}
+
 int run_dma_for_callback(int argc, char *argv[]) {
     if (argc > 1) {
         const auto number_of_buffers = strtoul(argv[1], nullptr, 0);
@@ -55,6 +75,9 @@ void init() {
     cmd_mutex_wait_func(serial_mutex::out_lock);
     cmd_mutex_release_func(serial_mutex::out_unlock);
 
+    cmd_add("dma-size", dma_size_callback, "Set DMA size", "Set the size of the SPI DMA transfers\ndma-size <size>");
+    cmd_add("print-tx-buffer", print_tx_buffer_callback, "Print tx buffer contents", nullptr);
+    cmd_alias_add("pt", "print-tx-buffer");
     cmd_add("run-dma-for", run_dma_for_callback, "Run DMA for specified number of buffers", "Run DMA for specified number of buffer, this makes it easier to check the buffer contents\nrun-dma-for <num buffers>");
     cmd_alias_add("rf", "run-dma-for");
     cmd_add("toggle-dma", toggle_dma_callback, "toggle DMA running", nullptr);

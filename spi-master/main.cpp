@@ -110,12 +110,24 @@ DMA_HandleTypeDef hdma = {
     .StreamIndex = 0
 };
 
-uint8_t tx_buffer[] = { 's', 'p', 'i', ' ' };
+const size_t tx_buffer_size = 256;
+uint8_t tx_buffer[tx_buffer_size];
+uint16_t dma_size = 4;
 
 bool dma_running = false;
 std::atomic_bool run_dma_for_enabled{false};
 std::atomic_ulong dma_buffer_count{0};
 std::atomic_ulong run_dma_for_number_of_buffers{0};
+
+void tx_buffer_init() {
+    uint8_t init_bytes[4] = { 's', 'p', 'i', ' ' };  // length must be power of 2
+    size_t init_bytes_index = 0;
+    for (auto i = 0u; i < sizeof(tx_buffer); ++i) {
+        tx_buffer[i] = init_bytes[init_bytes_index];
+        ++init_bytes_index;
+        init_bytes_index %= sizeof(init_bytes);
+    }
+}
 
 void spi_init() {
     MBED_UNUSED const auto status = HAL_SPI_Init(&hspi);
@@ -133,7 +145,7 @@ void dma_init() {
 }
 
 void start_circular_dma() {
-    MBED_UNUSED const auto status = HAL_SPI_Transmit_DMA(&hspi, &tx_buffer[0], sizeof(tx_buffer));
+    MBED_UNUSED const auto status = HAL_SPI_Transmit_DMA(&hspi, &tx_buffer[0], dma_size);
     MBED_ASSERT(status == HAL_OK);
 }
 
@@ -143,10 +155,21 @@ void stop_circular_dma() {
 }
 
 void spi_tx_init() {
+    tx_buffer_init();
     spi_init();
     dma_init();
 }
 
+}
+
+void print_tx_buffer() {
+    const uint32_t *word_ptr = reinterpret_cast<uint32_t*>(&tx_buffer[0]);
+    for (auto i = 0u; i < sizeof(tx_buffer) / sizeof(uint32_t); ++i) {
+        cmd_printf("0x%" PRIx32 " ", *word_ptr);
+        ++word_ptr;
+
+        if (((i + 1) % 8) == 0) cmd_printf("\n");
+    }
 }
 
 void run_dma_for(const unsigned long number_of_buffers) {
@@ -160,6 +183,11 @@ void run_dma_for(const unsigned long number_of_buffers) {
     run_dma_for_enabled = true;
 
     toggle_dma();
+}
+
+void set_dma_size(const uint16_t size) {
+    MBED_ASSERT(size <= sizeof(tx_buffer));
+    dma_size = size;
 }
 
 void toggle_dma() {
