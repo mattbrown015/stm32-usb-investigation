@@ -111,7 +111,8 @@ DMA_HandleTypeDef hdma = {
 };
 
 const size_t tx_buffer_size = 256;
-uint8_t tx_buffer[tx_buffer_size];
+uint8_t m0_tx_buffer[tx_buffer_size];
+uint8_t m1_tx_buffer[tx_buffer_size];
 uint16_t dma_size = 4;
 
 bool dma_running = false;
@@ -122,8 +123,9 @@ std::atomic_ulong run_dma_for_number_of_buffers{0};
 void tx_buffer_init() {
     uint8_t init_bytes[4] = { 's', 'p', 'i', ' ' };  // length must be power of 2
     size_t init_bytes_index = 0;
-    for (auto i = 0u; i < sizeof(tx_buffer); ++i) {
-        tx_buffer[i] = init_bytes[init_bytes_index];
+    for (auto i = 0u; i < sizeof(m0_tx_buffer); ++i) {
+        m0_tx_buffer[i] = init_bytes[init_bytes_index];
+        m1_tx_buffer[i] = init_bytes[init_bytes_index];
         ++init_bytes_index;
         init_bytes_index %= sizeof(init_bytes);
     }
@@ -145,7 +147,7 @@ void dma_init() {
 }
 
 void start_circular_dma() {
-    MBED_UNUSED const auto status = HAL_SPI_Transmit_DMA(&hspi, &tx_buffer[0], dma_size);
+    MBED_UNUSED const auto status = HAL_SPI_Transmit_MultiBufferDMA(&hspi, &m0_tx_buffer[0], &m1_tx_buffer[0], dma_size);
     MBED_ASSERT(status == HAL_OK);
 }
 
@@ -163,8 +165,8 @@ void spi_tx_init() {
 }
 
 void print_tx_buffer() {
-    const uint32_t *word_ptr = reinterpret_cast<uint32_t*>(&tx_buffer[0]);
-    for (auto i = 0u; i < sizeof(tx_buffer) / sizeof(uint32_t); ++i) {
+    const uint32_t *word_ptr = reinterpret_cast<uint32_t*>(&m0_tx_buffer[0]);
+    for (auto i = 0u; i < sizeof(m0_tx_buffer) / sizeof(uint32_t); ++i) {
         cmd_printf("0x%" PRIx32 " ", *word_ptr);
         ++word_ptr;
 
@@ -186,7 +188,7 @@ void run_dma_for(const unsigned long number_of_buffers) {
 }
 
 void set_dma_size(const uint16_t size) {
-    MBED_ASSERT(size <= sizeof(tx_buffer));
+    MBED_ASSERT(size <= sizeof(m0_tx_buffer));
     dma_size = size;
 }
 
@@ -246,6 +248,22 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
 }
 
 extern "C" void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
+    if (!run_dma_for_enabled) {
+        return;
+    }
+
+    ++dma_buffer_count;
+    if (dma_buffer_count >= run_dma_for_number_of_buffers) {
+        // Stop the DMA as quickly as possible, i.e. don't wait for the event queue to be scheduled.
+        // When 'tx_buffer' is only 4 bytes long it's quite likely another buffer will be transmitted
+        // before the DMA stops. I'm expecting to make 'tx_buffer' which will change things.
+        HAL_SPI_DMAStop(hspi);
+        run_dma_for_enabled = false;
+        event_queue.call(toggle_dma);  // Will call 'HAL_SPI_DMAStop' again but doesn't seem to matter.
+    }
+}
+
+extern "C" void HAL_SPI_M1TxCpltCallback(SPI_HandleTypeDef *hspi) {
     if (!run_dma_for_enabled) {
         return;
     }
