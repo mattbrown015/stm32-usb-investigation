@@ -131,6 +131,16 @@ void tx_buffer_init() {
     }
 }
 
+void print_tx_buffer(uint8_t *const tx_buffer) {
+    const uint32_t *word_ptr = reinterpret_cast<uint32_t*>(tx_buffer);
+    for (auto i = 0u; i < tx_buffer_size / sizeof(uint32_t); ++i) {
+        cmd_printf("0x%" PRIx32 " ", *word_ptr);
+        ++word_ptr;
+
+        if (((i + 1) % 8) == 0) cmd_printf("\n");
+    }
+}
+
 void spi_init() {
     MBED_UNUSED const auto status = HAL_SPI_Init(&hspi);
     MBED_ASSERT(status == HAL_OK);
@@ -174,14 +184,12 @@ void spi_tx_init() {
 
 }
 
-void print_tx_buffer() {
-    const uint32_t *word_ptr = reinterpret_cast<uint32_t*>(&m0_tx_buffer[0]);
-    for (auto i = 0u; i < sizeof(m0_tx_buffer) / sizeof(uint32_t); ++i) {
-        cmd_printf("0x%" PRIx32 " ", *word_ptr);
-        ++word_ptr;
+void print_tx_buffers() {
+    cmd_printf("m0_tx_buffer\n");
+    print_tx_buffer(&m0_tx_buffer[0]);
 
-        if (((i + 1) % 8) == 0) cmd_printf("\n");
-    }
+    cmd_printf("m1_tx_buffer\n");
+    print_tx_buffer(&m1_tx_buffer[0]);
 }
 
 void run_dma_for(const unsigned long number_of_buffers) {

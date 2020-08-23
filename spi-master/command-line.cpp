@@ -33,7 +33,7 @@ int dma_size_callback(int argc, char *argv[]) {
 }
 
 int print_tx_buffer_callback(int argc, char *argv[]) {
-    print_tx_buffer();
+    print_tx_buffers();
     return CMDLINE_RETCODE_SUCCESS;
 }
 
