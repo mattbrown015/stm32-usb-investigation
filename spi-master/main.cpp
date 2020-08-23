@@ -146,14 +146,24 @@ void dma_init() {
     HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
 }
 
-void start_circular_dma() {
+void start_spi_transmitting() {
+    LL_GPIO_ResetOutputPin(GPIOD, LL_GPIO_PIN_14);
+
     MBED_UNUSED const auto status = HAL_SPI_Transmit_MultiBufferDMA(&hspi, &m0_tx_buffer[0], &m1_tx_buffer[0], dma_size);
     MBED_ASSERT(status == HAL_OK);
+
+    dma_running = true;
+    cmd_printf("SPI transmitting\n");
 }
 
-void stop_circular_dma() {
+void stop_spi_transmitting() {
     // Returns HAL_ERROR if already stopped but I don't think it matters.
     HAL_SPI_DMAStop(&hspi);
+
+    LL_GPIO_SetOutputPin(GPIOD, LL_GPIO_PIN_14);
+
+    dma_running = false;
+    cmd_printf("SPI not transmitting\n");
 }
 
 void spi_tx_init() {
@@ -194,19 +204,9 @@ void set_dma_size(const uint16_t size) {
 
 void toggle_dma() {
     if (!dma_running) {
-        LL_GPIO_ResetOutputPin(GPIOD, LL_GPIO_PIN_14);
-
-        start_circular_dma();
-
-        dma_running = true;
-        cmd_printf("DMA running\n");
+        start_spi_transmitting();
     } else {
-        stop_circular_dma();
-
-        LL_GPIO_SetOutputPin(GPIOD, LL_GPIO_PIN_14);
-
-        dma_running = false;
-        cmd_printf("DMA not running\n");
+        stop_spi_transmitting();
     }
 }
 
@@ -275,7 +275,7 @@ extern "C" void HAL_SPI_M1TxCpltCallback(SPI_HandleTypeDef *hspi) {
         // before the DMA stops. I'm expecting to make 'tx_buffer' which will change things.
         HAL_SPI_DMAStop(hspi);
         run_dma_for_enabled = false;
-        event_queue.call(toggle_dma);  // Will call 'HAL_SPI_DMAStop' again but doesn't seem to matter.
+        event_queue.call(stop_spi_transmitting);  // Will call 'HAL_SPI_DMAStop' again but doesn't seem to matter.
     }
 }
 
