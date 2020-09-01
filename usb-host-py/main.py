@@ -60,13 +60,13 @@ def _open_device(id_vendor, id_product):
         print("found device with idVendor 0x{:x} idProduct 0x{:x}".format(id_vendor, id_product))
         device.set_configuration()
         return _get_end_point_addresses(device)
-    else:
-        print(
-            "failed to find device with idVendor 0x{:x} idProduct 0x{:x}"
-            .format(id_vendor, id_product)
-            )
 
-    return device
+    print(
+        "failed to find device with idVendor 0x{:x} idProduct 0x{:x}"
+        .format(id_vendor, id_product)
+        )
+
+    return None
 
 def _do_somthing_with_device(device):
     assert device is not None
