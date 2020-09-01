@@ -30,7 +30,10 @@ def _get_end_point_addresses(device):
         return None
 
     for endpoint in interface:
-        print("bEndpointAddress 0x{:x} bmAttributes 0x{:x} wMaxPacketSize 0x{:x}".format(endpoint.bEndpointAddress, endpoint.bmAttributes, endpoint.wMaxPacketSize))
+        print(
+            "bEndpointAddress 0x{:x} bmAttributes 0x{:x} wMaxPacketSize 0x{:x}"
+            .format(endpoint.bEndpointAddress, endpoint.bmAttributes, endpoint.wMaxPacketSize)
+            )
 
         is_in = usb.util.endpoint_direction(endpoint.bEndpointAddress) == usb.util.ENDPOINT_IN
         is_bulk = usb.util.endpoint_type(endpoint.bmAttributes) == usb.util.ENDPOINT_TYPE_BULK
@@ -58,7 +61,10 @@ def _open_device(id_vendor, id_product):
         device.set_configuration()
         return _get_end_point_addresses(device)
     else:
-        print("failed to find device with idVendor 0x{:x} idProduct 0x{:x}".format(id_vendor, id_product))
+        print(
+            "failed to find device with idVendor 0x{:x} idProduct 0x{:x}"
+            .format(id_vendor, id_product)
+            )
 
     return device
 
