@@ -68,6 +68,9 @@ def _open_device(id_vendor, id_product):
 
     return device
 
+def _do_somthing_with_device(device):
+    assert device is not None
+
 def _main():
     print("usb-host")
 
@@ -76,6 +79,8 @@ def _main():
     _print_device_list()
 
     device = _open_device(0x1f00, 0x2012)
+
+    _do_somthing_with_device(device)
 
 if __name__ == "__main__":
     _main()
