@@ -119,6 +119,14 @@ bool dma_running = false;
 std::atomic_bool run_dma_for_enabled{false};
 std::atomic_ulong dma_buffer_count{0};
 std::atomic_ulong run_dma_for_number_of_buffers{0};
+bool changing_data_enabled{false};
+uint32_t changing_data_next_value{0};
+
+enum class buffer_to_fill {
+    m0,
+    m1
+};
+buffer_to_fill changing_data_next_buffer = buffer_to_fill::m0;
 
 void tx_buffer_init() {
     uint8_t init_bytes[4] = { 's', 'p', 'i', ' ' };  // length must be power of 2
@@ -182,6 +190,50 @@ void spi_tx_init() {
     dma_init();
 }
 
+}
+
+void changing_data_fill_next_buffer() {
+    uint8_t *tx_buffer =
+        changing_data_next_buffer == buffer_to_fill::m0 ? m0_tx_buffer : m1_tx_buffer;
+    changing_data_next_buffer = changing_data_next_buffer == buffer_to_fill::m0 ? buffer_to_fill::m1 : buffer_to_fill::m0;
+
+    uint32_t *word_ptr = reinterpret_cast<uint32_t*>(tx_buffer);
+
+    for (auto i = 0u; i < tx_buffer_size / sizeof(uint32_t); ++i) {
+        *word_ptr = changing_data_next_value;
+        ++changing_data_next_value;  // Deliberate wrap
+        ++word_ptr;
+    }
+}
+
+void changing_data() {
+    if (changing_data_enabled) {
+        return;
+    }
+
+    stop_spi_transmitting();
+
+    changing_data_next_value = 0;
+    changing_data_fill_next_buffer();
+    changing_data_fill_next_buffer();
+
+    changing_data_enabled = true;
+    dma_size = tx_buffer_size;  // Transmit large buffer so that there is time to refill
+
+    start_spi_transmitting();
+}
+
+void constant_data() {
+    if (!changing_data_enabled) {
+        return;
+    }
+
+    tx_buffer_init();
+    stop_spi_transmitting();
+
+    changing_data_enabled = false;
+
+    start_spi_transmitting();
 }
 
 void print_tx_buffers() {
@@ -256,6 +308,10 @@ extern "C" void HAL_SPI_MspInit(SPI_HandleTypeDef *) {
 }
 
 extern "C" void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
+    if (changing_data_enabled) {
+        event_queue.call(changing_data_fill_next_buffer);
+    }
+
     if (!run_dma_for_enabled) {
         return;
     }
@@ -272,6 +328,10 @@ extern "C" void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
 }
 
 extern "C" void HAL_SPI_M1TxCpltCallback(SPI_HandleTypeDef *hspi) {
+    if (changing_data_enabled) {
+        event_queue.call(changing_data_fill_next_buffer);
+    }
+
     if (!run_dma_for_enabled) {
         return;
     }

@@ -17,6 +17,16 @@ const size_t stack_size = OS_STACK_SIZE; // /Normal/ stack size
 MBED_ALIGN(8) unsigned char stack[stack_size];
 rtos::Thread thread(osPriorityNormal, sizeof(stack), stack, "command-line");
 
+int changing_data_callback(int argc, char *argv[]) {
+    event_queue.call(changing_data);
+    return CMDLINE_RETCODE_SUCCESS;
+}
+
+int constant_data_callback(int argc, char *argv[]) {
+    event_queue.call(constant_data);
+    return CMDLINE_RETCODE_SUCCESS;
+}
+
 int dma_size_callback(int argc, char *argv[]) {
     if (argc > 1) {
         const auto size = strtoul(argv[1], nullptr, 0);
@@ -75,6 +85,8 @@ void init() {
     cmd_mutex_wait_func(serial_mutex::out_lock);
     cmd_mutex_release_func(serial_mutex::out_unlock);
 
+    cmd_add("changing-data", changing_data_callback, "Transmit Changing Data", nullptr);
+    cmd_add("constant-data", constant_data_callback, "Transmit Constant Data", nullptr);
     cmd_add("dma-size", dma_size_callback, "Set DMA size", "Set the size of the SPI DMA transfers\ndma-size <size>");
     cmd_add("print-tx-buffer", print_tx_buffer_callback, "Print tx buffer contents", nullptr);
     cmd_alias_add("pt", "print-tx-buffer");

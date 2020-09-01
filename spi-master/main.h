@@ -2,6 +2,8 @@
 
 #include <events/EventQueue.h>
 
+void changing_data();
+void constant_data();
 void print_tx_buffers();
 void run_dma_for(const unsigned long number_of_buffers);
 void set_dma_size(const uint16_t size);
