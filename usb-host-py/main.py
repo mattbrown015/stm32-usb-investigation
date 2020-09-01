@@ -1,3 +1,6 @@
+r"""usb-host-py - Simple host for a USB device.
+"""
+
 import usb.core
 import usb.util
 
