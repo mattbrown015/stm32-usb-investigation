@@ -7,10 +7,10 @@ _epbulk_in_mps = 0
 _epbulk_out_address = _INVALID_EP_ADDRESS
 _epbulk_out_mps = 0
 
-def print_device_list():
+def _print_device_list():
     print(usb.core.show_devices())
 
-def get_end_point_addresses(device):
+def _get_end_point_addresses(device):
     global _epbulk_in_address, _epbulk_in_mps, _epbulk_out_address, _epbulk_out_mps
 
     configuration = device[0]
@@ -48,25 +48,25 @@ def get_end_point_addresses(device):
 
     return device
 
-def open_device(id_vendor, id_product):
+def _open_device(id_vendor, id_product):
     device = usb.core.find(idVendor=id_vendor, idProduct=id_product)
     if device is not None:
         print("found device with idVendor 0x{:x} idProduct 0x{:x}".format(id_vendor, id_product))
         device.set_configuration()
-        return get_end_point_addresses(device)
+        return _get_end_point_addresses(device)
     else:
         print("failed to find device with idVendor 0x{:x} idProduct 0x{:x}".format(id_vendor, id_product))
 
     return device
 
-def main():
+def _main():
     print("usb-host")
 
     devices = list(usb.core.find(find_all=True))
     print("number_of_devices {}".format(len(devices)))
-    print_device_list()
+    _print_device_list()
 
-    device = open_device(0x1f00, 0x2012)
+    device = _open_device(0x1f00, 0x2012)
 
 if __name__ == "__main__":
-    main()
+    _main()
