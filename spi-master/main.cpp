@@ -190,8 +190,6 @@ void spi_tx_init() {
     dma_init();
 }
 
-}
-
 void changing_data_fill_next_buffer() {
     uint8_t *tx_buffer =
         changing_data_next_buffer == buffer_to_fill::m0 ? m0_tx_buffer : m1_tx_buffer;
@@ -204,6 +202,8 @@ void changing_data_fill_next_buffer() {
         ++changing_data_next_value;  // Deliberate wrap
         ++word_ptr;
     }
+}
+
 }
 
 void changing_data() {
