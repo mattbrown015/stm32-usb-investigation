@@ -68,8 +68,65 @@ def _open_device(id_vendor, id_product):
 
     return None
 
+def _check_configuration_value(device):
+    configuration = device.get_active_configuration()
+
+    if configuration.bConfigurationValue == 1:
+        return True
+
+    print(
+        "'libusb_get_configuration' succeeded, configuration value is {}"
+        .format(configuration.bConfigurationValue)
+        )
+
+    return False
+
+def _control_transfer_out(device):
+    data = "some data\0"
+    bytes_transferred = device.ctrl_transfer(
+        bmRequestType
+            = usb.util.CTRL_OUT
+            | usb.util.CTRL_TYPE_VENDOR
+            | usb.util.CTRL_RECIPIENT_DEVICE,
+        bRequest=0,
+        wValue=0,
+        wIndex=0,
+        data_or_wLength=data
+        )
+    print("bytes_transferred {}".format(bytes_transferred))
+    if bytes_transferred != len(data):
+        print("bytes_transferred {}, expected {}".format(bytes_transferred, len(data)))
+        return False
+
+    return True
+
+def _control_transfer_in(device):
+    data = device.ctrl_transfer(
+        bmRequestType
+            = usb.util.CTRL_IN
+            | usb.util.CTRL_TYPE_VENDOR
+            | usb.util.CTRL_RECIPIENT_DEVICE,
+        bRequest=0,
+        wValue=0,
+        wIndex=0,
+        data_or_wLength=13
+        )
+    if len(data) != 13:
+        return False
+
+    return True
+
 def _do_somthing_with_device(device):
     assert device is not None
+
+    if not _check_configuration_value(device):
+        return
+
+    # Control endpoint, i.e. endpoint 0, available regardless of whether or not interface is claimed
+    if not _control_transfer_out(device):
+        return
+    if not _control_transfer_in(device):
+        return
 
 def _main():
     print("usb-host")
