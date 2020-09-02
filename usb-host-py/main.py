@@ -1,6 +1,7 @@
 r"""usb-host-py - Simple host for a USB device.
 """
 
+from timeit import default_timer
 import usb.core
 import usb.util
 
@@ -137,8 +138,25 @@ def _bulk_transfer_in(device):
     return True
 
 def _repeat_bulk_in_transfer(device):
-    if not _bulk_transfer_in(device):
-        return False
+    number_of_bulk_in_repeats = 10000
+    print("perform {} bulk in transfers\n".format(number_of_bulk_in_repeats))
+
+    start = default_timer()
+    for _ in range(number_of_bulk_in_repeats):
+        if not _bulk_transfer_in(device):
+            return False
+
+    stop = default_timer()
+    duration_us = (stop - start) * 1000000
+
+    print("duration_us {} us".format(round(duration_us)))
+    throughput_bytes_per_us = (_BULK_TRANSFER_LENGTH * number_of_bulk_in_repeats) / duration_us
+    throughput_bytes_per_s = throughput_bytes_per_us * 100000
+    throughput_megabytes_per_s = throughput_bytes_per_s / 100000
+    throughput_megabits_per_s = throughput_megabytes_per_s * 8
+    print("throughput MB/s {}".format(throughput_megabytes_per_s))
+    print("throughput Mbit/s {}".format(throughput_megabits_per_s))
+    print("completed {} bulk in transfers".format(number_of_bulk_in_repeats))
 
     return True
 
