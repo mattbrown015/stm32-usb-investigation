@@ -139,7 +139,7 @@ def _repeat_bulk_in_transfer(device):
 
     return True
 
-def _do_somthing_with_device(device):
+def _do_something_with_device(device):
     assert device is not None
 
     if not _check_configuration_value(device):
@@ -165,7 +165,7 @@ def _main():
 
     device = _open_device(0x1f00, 0x2012)
 
-    _do_somthing_with_device(device)
+    _do_something_with_device(device)
 
 if __name__ == "__main__":
     _main()
