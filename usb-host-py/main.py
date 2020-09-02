@@ -128,7 +128,10 @@ def _bulk_transfer_in(device):
     data = device.read(_epbulk_in_address, _BULK_TRANSFER_LENGTH)
 
     if len(data) != _BULK_TRANSFER_LENGTH:
-        print("Number of bytes actually transferred not the same as the requested length, transferred {}, length {}".format(len(data), _BULK_TRANSFER_LENGTH))
+        print(
+            "Number of bytes actually transferred not the same as the requested length, transferred {}, length {}"
+            .format(len(data), _BULK_TRANSFER_LENGTH)
+            )
         return False
 
     return True
