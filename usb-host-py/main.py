@@ -160,6 +160,36 @@ def _repeat_bulk_in_transfer(device):
 
     return True
 
+def _itoa(data):
+    r"simulate std::itoa and avoid overflow exception"
+    initialiser = 2
+    for idx, _ in enumerate(data):
+        data[idx] = initialiser
+        initialiser += 1
+        if initialiser == 256:
+            initialiser = 0
+
+def _bulk_transfer_out(device):
+    global _epbulk_out_address, _epbulk_out_mps
+
+    assert _epbulk_out_address != _INVALID_EP_ADDRESS
+    assert _epbulk_out_mps != 0
+
+    data = bytearray(_BULK_TRANSFER_LENGTH)
+    _itoa(data)
+
+    length = len(data)
+    transferred = device.write(_epbulk_out_address, data)
+    if transferred != length:
+        print(
+            "Number of bytes actually transferred not the same as the requested length,"
+            " transferred {}, length {}"
+            .format(transferred, length)
+            )
+        return False
+
+    return True
+
 def _do_something_with_device(device):
     assert device is not None
 
@@ -176,6 +206,7 @@ def _do_something_with_device(device):
 
     if not _repeat_bulk_in_transfer(device):
         return
+    _bulk_transfer_out(device)
 
 def _main():
     print("usb-host")
