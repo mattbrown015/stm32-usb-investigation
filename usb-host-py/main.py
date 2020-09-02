@@ -4,6 +4,9 @@ r"""usb-host-py - Simple host for a USB device.
 import usb.core
 import usb.util
 
+# Copied from usb-device.h
+_BULK_TRANSFER_LENGTH = 1024
+
 _INVALID_EP_ADDRESS = 0xff
 _epbulk_in_address = _INVALID_EP_ADDRESS
 _epbulk_in_mps = 0
@@ -116,6 +119,26 @@ def _control_transfer_in(device):
 
     return True
 
+def _bulk_transfer_in(device):
+    global _epbulk_in_address, _epbulk_in_mps
+
+    assert _epbulk_in_address != _INVALID_EP_ADDRESS
+    assert _epbulk_in_mps != 0
+
+    data = device.read(_epbulk_in_address, _BULK_TRANSFER_LENGTH)
+
+    if len(data) != _BULK_TRANSFER_LENGTH:
+        print("Number of bytes actually transferred not the same as the requested length, transferred {}, length {}}".format(len(data), _BULK_TRANSFER_LENGTH))
+        return False
+
+    return True
+
+def _repeat_bulk_in_transfer(device):
+    if not _bulk_transfer_in(device):
+        return False
+
+    return True
+
 def _do_somthing_with_device(device):
     assert device is not None
 
@@ -126,6 +149,11 @@ def _do_somthing_with_device(device):
     if not _control_transfer_out(device):
         return
     if not _control_transfer_in(device):
+        return
+
+    # Interface claiming should be managed automatically
+
+    if not _repeat_bulk_in_transfer(device):
         return
 
 def _main():
